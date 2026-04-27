@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Text, Switch, Button, color, Spinner } from 'folds';
 import { IPusherRequest } from 'matrix-js-sdk';
 import { SequenceCard } from '../../../components/sequence-card';
@@ -85,15 +85,42 @@ function EmailNotification() {
 }
 
 export function SystemNotification() {
-  const notifPermission = usePermissionState('notifications', getNotificationState());
+  const notifPermissionFromHook = usePermissionState('notifications', getNotificationState());
+  const [notificationPermissionOverride, setNotificationPermissionOverride] =
+    useState<PermissionState>();
   const [showNotifications, setShowNotifications] = useSetting(settingsAtom, 'showNotifications');
   const [isNotificationSounds, setIsNotificationSounds] = useSetting(
     settingsAtom,
     'isNotificationSounds'
   );
 
-  const requestNotificationPermission = () => {
-    window.Notification.requestPermission();
+  useEffect(() => {
+    setNotificationPermissionOverride(undefined);
+  }, [notifPermissionFromHook]);
+
+  const notifPermission = notificationPermissionOverride ?? notifPermissionFromHook;
+  const notificationUnsupported = !('Notification' in window);
+  const notificationBlockedByContext = !window.isSecureContext;
+
+  const deniedDescription = useMemo(() => {
+    if (notificationUnsupported) {
+      return 'Notifications are not supported by the system.';
+    }
+    if (notificationBlockedByContext) {
+      return 'Notifications are blocked on insecure origin. Open the app via HTTPS or localhost.';
+    }
+    return 'Notification permission is blocked. Please allow notification permission from browser address bar.';
+  }, [notificationUnsupported, notificationBlockedByContext]);
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) return;
+
+    try {
+      const permission = await window.Notification.requestPermission();
+      setNotificationPermissionOverride(permission === 'default' ? 'prompt' : permission);
+    } catch {
+      setNotificationPermissionOverride(getNotificationState());
+    }
   };
 
   return (
@@ -106,13 +133,11 @@ export function SystemNotification() {
         gap="400"
       >
         <SettingTile
-          title="Desktop Notifications"
+          title="Enable Notifications"
           description={
             notifPermission === 'denied' ? (
               <Text as="span" style={{ color: color.Critical.Main }} size="T200">
-                {'Notification' in window
-                  ? 'Notification permission is blocked. Please allow notification permission from browser address bar.'
-                  : 'Notifications are not supported by the system.'}
+                {deniedDescription}
               </Text>
             ) : (
               <span>Show desktop notifications when message arrive.</span>
