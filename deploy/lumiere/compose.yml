@@ -1,0 +1,14 @@
+services:
+  lumiere-main:
+    image: ${MAIN_IMAGE}
+    container_name: lumiere-main
+    restart: unless-stopped
+    ports:
+      - "8083:80"
+
+  lumiere-dev:
+    image: ${DEV_IMAGE}
+    container_name: lumiere-dev
+    restart: unless-stopped
+    ports:
+      - "8084:80"
