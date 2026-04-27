@@ -12,6 +12,7 @@ import {
   config,
   toRem,
 } from 'folds';
+import classNames from 'classnames';
 import FocusTrap from 'focus-trap-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -179,7 +180,10 @@ export function AlternativeSidebarCreateFab() {
               }
             >
               <SidebarAvatar
-                className={menuAnchor ? ContainerColor({ variant: 'Surface' }) : undefined}
+                className={classNames(
+                  css.FabSidebarAvatar,
+                  menuAnchor ? ContainerColor({ variant: 'Surface' }) : undefined
+                )}
                 as="button"
                 ref={triggerRef}
                 outlined
