@@ -1,0 +1,153 @@
+name: Deploy Lumiere (Raspberry)
+
+on:
+  push:
+    branches:
+      - main-lumiere
+      - dev-lumiere
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-lumiere-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Prepare deploy variables
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BRANCH="${GITHUB_REF_NAME}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY,,}"
+          IMAGE_SHA="${IMAGE_REPO}:${BRANCH}-${SHORT_SHA}"
+          IMAGE_BRANCH="${IMAGE_REPO}:${BRANCH}"
+
+          case "$BRANCH" in
+            main-lumiere)
+              SERVICE="lumiere-main"
+              DOMAIN="lumiere.mktk.cc"
+              ENV_KEY="MAIN_IMAGE"
+              ;;
+            dev-lumiere)
+              SERVICE="lumiere-dev"
+              DOMAIN="dev-lumiere.mktk.cc"
+              ENV_KEY="DEV_IMAGE"
+              ;;
+            *)
+              echo "Unsupported branch: $BRANCH" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "service=$SERVICE" >> "$GITHUB_OUTPUT"
+          echo "domain=$DOMAIN" >> "$GITHUB_OUTPUT"
+          echo "env_key=$ENV_KEY" >> "$GITHUB_OUTPUT"
+          echo "image_sha=$IMAGE_SHA" >> "$GITHUB_OUTPUT"
+          echo "image_branch=$IMAGE_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ steps.vars.outputs.image_sha }}
+            ${{ steps.vars.outputs.image_branch }}
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519
+
+      - name: Sync deploy bundle to Raspberry
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rsync -az --delete \
+            -e "ssh -J root@5.42.98.216" \
+            deploy/lumiere/ \
+            pi@192.168.1.182:/home/pi/lumiere-deploy/
+
+      - name: Deploy selected service on Raspberry
+        shell: bash
+        env:
+          TARGET_SERVICE: ${{ steps.vars.outputs.service }}
+          TARGET_ENV_KEY: ${{ steps.vars.outputs.env_key }}
+          TARGET_IMAGE: ${{ steps.vars.outputs.image_sha }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          GHCR_TOKEN_B64="$(printf '%s' "$GHCR_TOKEN" | base64 -w0)"
+
+          ssh -J root@5.42.98.216 pi@192.168.1.182 \
+            "TARGET_SERVICE='$TARGET_SERVICE' TARGET_ENV_KEY='$TARGET_ENV_KEY' TARGET_IMAGE='$TARGET_IMAGE' GHCR_USER='$GHCR_USER' GHCR_TOKEN_B64='$GHCR_TOKEN_B64' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          cd /home/pi/lumiere-deploy
+
+          if [ ! -f .env ]; then
+            cp .env.template .env
+          fi
+
+          GHCR_TOKEN="$(printf '%s' "$GHCR_TOKEN_B64" | base64 -d)"
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null
+
+          if grep -q "^${TARGET_ENV_KEY}=" .env; then
+            sed -i "s|^${TARGET_ENV_KEY}=.*|${TARGET_ENV_KEY}=${TARGET_IMAGE}|" .env
+          else
+            echo "${TARGET_ENV_KEY}=${TARGET_IMAGE}" >> .env
+          fi
+
+          docker compose -f compose.yml --env-file .env pull "$TARGET_SERVICE"
+          docker compose -f compose.yml --env-file .env up -d "$TARGET_SERVICE"
+          docker compose -f compose.yml ps "$TARGET_SERVICE"
+          REMOTE
+
+      - name: Smoke check domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSI --max-time 15 "https://${{ steps.vars.outputs.domain }}" >/tmp/lumiere-smoke.txt
+          sed -n '1,20p' /tmp/lumiere-smoke.txt
