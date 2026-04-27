@@ -33,8 +33,10 @@ import { About } from './about';
 import { UseStateProvider } from '../../components/UseStateProvider';
 import { stopPropagation } from '../../utils/keyboard';
 import { LogoutDialog } from '../../components/LogoutDialog';
+import { LumiereSettings } from './lumiere-settings';
 
 export enum SettingsPages {
+  LumiereSettingsPage,
   GeneralPage,
   AccountPage,
   NotificationPage,
@@ -53,6 +55,11 @@ type SettingsMenuItem = {
 const useSettingsMenuItems = (): SettingsMenuItem[] =>
   useMemo(
     () => [
+      {
+        page: SettingsPages.LumiereSettingsPage,
+        name: 'Lumiere Settings',
+        icon: Icons.Sun,
+      },
       {
         page: SettingsPages.GeneralPage,
         name: 'General',
@@ -109,7 +116,7 @@ export function Settings({ initialPage, requestClose }: SettingsProps) {
   const screenSize = useScreenSizeContext();
   const [activePage, setActivePage] = useState<SettingsPages | undefined>(() => {
     if (initialPage) return initialPage;
-    return screenSize === ScreenSize.Mobile ? undefined : SettingsPages.GeneralPage;
+    return screenSize === ScreenSize.Mobile ? undefined : SettingsPages.LumiereSettingsPage;
   });
   const menuItems = useSettingsMenuItems();
 
@@ -210,6 +217,9 @@ export function Settings({ initialPage, requestClose }: SettingsProps) {
         )
       }
     >
+      {activePage === SettingsPages.LumiereSettingsPage && (
+        <LumiereSettings requestClose={handlePageRequestClose} />
+      )}
       {activePage === SettingsPages.GeneralPage && (
         <General requestClose={handlePageRequestClose} />
       )}
