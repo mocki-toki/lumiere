@@ -18,7 +18,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   encodeSearchParamValueArray,
   getCreatePath,
-  getDirectCreatePath,
   getHomeCreatePath,
   getSpacePath,
   withSearchParam,
@@ -49,7 +48,7 @@ export function AlternativeSidebarCreateFab() {
   };
 
   const handleCreateChat = () => {
-    navigate(getDirectCreatePath());
+    navigate(withSearchParam(getHomeCreatePath(), { mode: 'chat' }));
     setMenuAnchor(undefined);
   };
 
