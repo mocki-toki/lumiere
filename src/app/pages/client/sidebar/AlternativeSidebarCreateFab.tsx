@@ -31,9 +31,12 @@ import { SettingTile } from '../../../components/setting-tile';
 import { JoinAddressPrompt } from '../../../components/join-address-prompt';
 import { _RoomSearchParams } from '../../paths';
 import * as css from './AlternativeSidebarCreateFab.css';
+import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
 
 export function AlternativeSidebarCreateFab() {
   const navigate = useNavigate();
+  const screenSize = useScreenSizeContext();
+  const mobile = screenSize === ScreenSize.Mobile;
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
   const [joinAddress, setJoinAddress] = useState(false);
 
@@ -66,14 +69,7 @@ export function AlternativeSidebarCreateFab() {
   };
 
   return (
-    <Box
-      style={{
-        position: 'absolute',
-        right: config.space.S300,
-        bottom: config.space.S300,
-        zIndex: 2,
-      }}
-    >
+    <Box className={classNames(css.FabContainer, mobile && css.FabContainerMobile)}>
       <SidebarItem className={css.FabSidebarItem}>
         <TooltipProvider
           delay={400}
