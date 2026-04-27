@@ -39,13 +39,13 @@ export function About({ requestClose }: AboutProps) {
                   <img
                     style={{ width: toRem(60), height: toRem(60) }}
                     src={CinnySVG}
-                    alt="Cinny logo"
+                    alt="Lumiere logo"
                   />
                 </Box>
                 <Box direction="Column" gap="300">
                   <Box direction="Column" gap="100">
                     <Box gap="100" alignItems="End">
-                      <Text size="H3">Cinny</Text>
+                      <Text size="H3">Lumiere</Text>
                       <Text size="T200">v4.11.1</Text>
                     </Box>
                     <Text>Yet another matrix client.</Text>
@@ -54,7 +54,7 @@ export function About({ requestClose }: AboutProps) {
                   <Box gap="200" wrap="Wrap">
                     <Button
                       as="a"
-                      href="https://github.com/cinnyapp/cinny"
+                      href="https://github.com/mocki-toki/lumiere"
                       rel="noreferrer noopener"
                       target="_blank"
                       variant="Secondary"
@@ -67,7 +67,7 @@ export function About({ requestClose }: AboutProps) {
                     </Button>
                     <Button
                       as="a"
-                      href="https://cinny.in/#sponsor"
+                      href="https://github.com/mocki-toki/lumiere"
                       rel="noreferrer noopener"
                       target="_blank"
                       variant="Critical"
@@ -76,7 +76,7 @@ export function About({ requestClose }: AboutProps) {
                       radii="300"
                       before={<Icon src={Icons.Heart} size="100" filled />}
                     >
-                      <Text size="B300">Support</Text>
+                      <Text size="B300">Project</Text>
                     </Button>
                   </Box>
                 </Box>
