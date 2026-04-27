@@ -18,9 +18,11 @@ import {
   SearchTab,
 } from './sidebar';
 import { CreateTab } from './sidebar/CreateTab';
+import { useAlternativeSidebarSetting } from '../../features/settings/lumiere-settings/store';
 
 export function SidebarNav() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [alternativeSidebar] = useAlternativeSidebarSetting();
 
   return (
     <Sidebar>
@@ -35,7 +37,7 @@ export function SidebarNav() {
             <SidebarStackSeparator />
             <SidebarStack>
               <ExploreTab />
-              <CreateTab />
+              {!alternativeSidebar && <CreateTab />}
             </SidebarStack>
           </Scroll>
         }

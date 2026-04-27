@@ -1,15 +1,18 @@
 import React from 'react';
-import { Box, Icon, IconButton, Icons, Scroll, Text } from 'folds';
+import { Box, Icon, IconButton, Icons, Scroll, Switch, Text } from 'folds';
 import { Page, PageContent, PageHeader } from '../../../components/page';
 import { SequenceCard } from '../../../components/sequence-card';
 import { SettingTile } from '../../../components/setting-tile';
 import { SequenceCardStyle } from '../styles.css';
+import { useAlternativeSidebarSetting } from './store';
 
 type LumiereSettingsProps = {
   requestClose: () => void;
 };
 
 export function LumiereSettings({ requestClose }: LumiereSettingsProps) {
+  const [alternativeSidebar, setAlternativeSidebar] = useAlternativeSidebarSetting();
+
   return (
     <Page>
       <PageHeader outlined={false}>
@@ -30,7 +33,7 @@ export function LumiereSettings({ requestClose }: LumiereSettingsProps) {
         <Scroll hideTrack visibility="Hover">
           <PageContent>
             <Box direction="Column" gap="100">
-              <Text size="L400">Lumiere</Text>
+              <Text size="L400">Design</Text>
               <SequenceCard
                 className={SequenceCardStyle}
                 variant="SurfaceVariant"
@@ -38,8 +41,9 @@ export function LumiereSettings({ requestClose }: LumiereSettingsProps) {
                 gap="400"
               >
                 <SettingTile
-                  title="Fork Profile"
-                  description="This section is reserved for Lumiere-specific settings."
+                  title="Alternative Sidebar"
+                  description="Use the alternative sidebar layout and create menu."
+                  after={<Switch value={alternativeSidebar} onChange={setAlternativeSidebar} />}
                 />
               </SequenceCard>
             </Box>
