@@ -6,6 +6,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAtom, useAtomValue } from 'jotai';
 import {
   Avatar,
@@ -38,7 +39,12 @@ import {
   NavItemContent,
   NavLink,
 } from '../../../components/nav';
-import { getSpaceLobbyPath, getSpaceRoomPath, getSpaceSearchPath } from '../../pathUtils';
+import {
+  getHomePath,
+  getSpaceLobbyPath,
+  getSpaceRoomPath,
+  getSpaceSearchPath,
+} from '../../pathUtils';
 import { getCanonicalAliasOrRoomId, isRoomAlias } from '../../../utils/matrix';
 import { useSelectedRoom } from '../../../hooks/router/useSelectedRoom';
 import {
@@ -85,14 +91,18 @@ import { AsyncStatus, useAsyncCallback } from '../../../hooks/useAsyncCallback';
 import { BreakWord } from '../../../styles/Text.css';
 import { InviteUserPrompt } from '../../../components/invite-user-prompt';
 import { useCallEmbed } from '../../../hooks/useCallEmbed';
-import { useRoundAvatarsSetting } from '../../../features/settings/lumiere-settings/store';
+import {
+  useAlternativeSidebarSetting,
+  useRoundAvatarsSetting,
+} from '../../../features/settings/lumiere-settings/store';
 import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
 
 type SpaceMenuProps = {
   room: Room;
   requestClose: () => void;
 };
-const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(({ room, requestClose }, ref) => {
+const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(
+  ({ room, requestClose }, ref) => {
   const screenSize = useScreenSizeContext();
   const touchMenu = screenSize === ScreenSize.Mobile || screenSize === ScreenSize.Tablet;
   const menuIconSize = touchMenu ? '200' : '100';
@@ -150,137 +160,141 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(({ room, requestClo
   return (
     <Menu ref={ref} style={{ maxWidth: menuMaxWidth, width: '100vw' }}>
       <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
-        {invitePrompt && room && (
-          <InviteUserPrompt
-            room={room}
-            requestClose={() => {
-              setInvitePrompt(false);
-              requestClose();
-            }}
-          />
-        )}
-        <MenuItem
-          onClick={handleMarkAsRead}
-          size="300"
-          after={
-            <Box style={menuIconWrapStyle}>
-              <Icon size={menuIconSize} src={Icons.CheckTwice} />
-            </Box>
-          }
-          radii="300"
-          disabled={!unread}
-        >
-          <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
-            Mark as Read
-          </Text>
-        </MenuItem>
-      </Box>
-      <Line variant="Surface" size="300" />
-      <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
-        <MenuItem
-          onClick={handleInvite}
-          variant="Primary"
-          fill="None"
-          size="300"
-          after={
-            <Box style={menuIconWrapStyle}>
-              <Icon size={menuIconSize} src={Icons.UserPlus} />
-            </Box>
-          }
-          radii="300"
-          aria-pressed={invitePrompt}
-          disabled={!canInvite}
-        >
-          <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
-            Invite
-          </Text>
-        </MenuItem>
-        <MenuItem
-          onClick={handleCopyLink}
-          size="300"
-          after={
-            <Box style={menuIconWrapStyle}>
-              <Icon size={menuIconSize} src={Icons.Link} />
-            </Box>
-          }
-          radii="300"
-        >
-          <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
-            Copy Link
-          </Text>
-        </MenuItem>
-        <MenuItem
-          onClick={handleRoomSettings}
-          size="300"
-          after={
-            <Box style={menuIconWrapStyle}>
-              <Icon size={menuIconSize} src={Icons.Setting} />
-            </Box>
-          }
-          radii="300"
-        >
-          <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
-            Space Settings
-          </Text>
-        </MenuItem>
-        {developerTools && (
+          {invitePrompt && room && (
+            <InviteUserPrompt
+              room={room}
+              requestClose={() => {
+                setInvitePrompt(false);
+                requestClose();
+              }}
+            />
+          )}
           <MenuItem
-            onClick={handleOpenTimeline}
+            onClick={handleMarkAsRead}
             size="300"
             after={
               <Box style={menuIconWrapStyle}>
-                <Icon size={menuIconSize} src={Icons.Terminal} />
+                <Icon size={menuIconSize} src={Icons.CheckTwice} />
+              </Box>
+            }
+            radii="300"
+            disabled={!unread}
+          >
+            <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+              Mark as Read
+            </Text>
+          </MenuItem>
+      </Box>
+      <Line variant="Surface" size="300" />
+      <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
+          <MenuItem
+            onClick={handleInvite}
+            variant="Primary"
+            fill="None"
+            size="300"
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.UserPlus} />
+              </Box>
+            }
+            radii="300"
+            aria-pressed={invitePrompt}
+            disabled={!canInvite}
+          >
+            <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+              Invite
+            </Text>
+          </MenuItem>
+          <MenuItem
+            onClick={handleCopyLink}
+            size="300"
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.Link} />
               </Box>
             }
             radii="300"
           >
             <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
-              Event Timeline
+              Copy Link
             </Text>
           </MenuItem>
-        )}
-      </Box>
-      <Line variant="Surface" size="300" />
-      <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
-        <UseStateProvider initial={false}>
-          {(promptLeave, setPromptLeave) => (
-            <>
-              <MenuItem
-                onClick={() => setPromptLeave(true)}
-                variant="Critical"
-                fill="None"
-                size="300"
-                after={
-                  <Box style={menuIconWrapStyle}>
-                    <Icon size={menuIconSize} src={Icons.ArrowGoLeft} />
-                  </Box>
-                }
-                radii="300"
-                aria-pressed={promptLeave}
-              >
-                <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
-                  Leave Space
-                </Text>
-              </MenuItem>
-              {promptLeave && (
-                <LeaveSpacePrompt
-                  roomId={room.roomId}
-                  onDone={requestClose}
-                  onCancel={() => setPromptLeave(false)}
-                />
-              )}
-            </>
+          <MenuItem
+            onClick={handleRoomSettings}
+            size="300"
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.Setting} />
+              </Box>
+            }
+            radii="300"
+          >
+            <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+              Space Settings
+            </Text>
+          </MenuItem>
+          {developerTools && (
+            <MenuItem
+              onClick={handleOpenTimeline}
+              size="300"
+              after={
+                <Box style={menuIconWrapStyle}>
+                  <Icon size={menuIconSize} src={Icons.Terminal} />
+                </Box>
+              }
+              radii="300"
+            >
+              <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+                Event Timeline
+              </Text>
+            </MenuItem>
           )}
-        </UseStateProvider>
-      </Box>
-    </Menu>
+        </Box>
+        <Line variant="Surface" size="300" />
+        <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
+          <UseStateProvider initial={false}>
+            {(promptLeave, setPromptLeave) => (
+              <>
+                <MenuItem
+                  onClick={() => setPromptLeave(true)}
+                  variant="Critical"
+                  fill="None"
+                  size="300"
+                  after={
+                    <Box style={menuIconWrapStyle}>
+                      <Icon size={menuIconSize} src={Icons.ArrowGoLeft} />
+                    </Box>
+                  }
+                  radii="300"
+                  aria-pressed={promptLeave}
+                >
+                  <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+                    Leave Space
+                  </Text>
+                </MenuItem>
+                {promptLeave && (
+                  <LeaveSpacePrompt
+                    roomId={room.roomId}
+                    onDone={requestClose}
+                    onCancel={() => setPromptLeave(false)}
+                  />
+                )}
+              </>
+            )}
+          </UseStateProvider>
+        </Box>
+      </Menu>
   );
-});
+  }
+);
 
-function SpaceHeader() {
+function SpaceHeader({ searchSelected }: { searchSelected: boolean }) {
+  const mx = useMatrixClient();
   const space = useSpace();
   const spaceName = useRoomName(space);
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
+  const navigate = useNavigate();
+  const [alternativeSidebar] = useAlternativeSidebarSetting();
 
   const joinRules = useStateEvent(
     space,
@@ -294,18 +308,30 @@ function SpaceHeader() {
       return cords;
     });
   };
+  const handleSearchClick = () => {
+    navigate(getSpaceSearchPath(getCanonicalAliasOrRoomId(mx, space.roomId)));
+  };
+  const handleBackHome = () => navigate(getHomePath());
 
   return (
     <>
       <PageNavHeader>
         <Box alignItems="Center" grow="Yes" gap="300">
           <Box grow="Yes" alignItems="Center" gap="100">
+            {alternativeSidebar && (
+              <IconButton fill="None" onClick={handleBackHome}>
+                <Icon src={Icons.ArrowLeft} />
+              </IconButton>
+            )}
             <Text size="H4" truncate>
               {spaceName}
             </Text>
             {joinRules?.join_rule !== JoinRule.Public && <Icon src={Icons.Lock} size="50" />}
           </Box>
-          <Box shrink="No">
+          <Box shrink="No" gap="100">
+            <IconButton aria-pressed={searchSelected} variant="Background" onClick={handleSearchClick}>
+              <Icon src={Icons.Search} size="200" filled={searchSelected} />
+            </IconButton>
             <IconButton aria-pressed={!!menuAnchor} variant="Background" onClick={handleOpenMenu}>
               <Icon src={Icons.VerticalDots} size="200" />
             </IconButton>
@@ -330,7 +356,10 @@ function SpaceHeader() {
                 escapeDeactivates: stopPropagation,
               }}
             >
-              <SpaceMenu room={space} requestClose={() => setMenuAnchor(undefined)} />
+              <SpaceMenu
+                room={space}
+                requestClose={() => setMenuAnchor(undefined)}
+              />
             </FocusTrap>
           }
         />
@@ -420,6 +449,7 @@ export function Space() {
   const allJoinedRooms = useMemo(() => new Set(allRooms), [allRooms]);
   const notificationPreferences = useRoomsNotificationPreferencesContext();
   const [roundAvatars] = useRoundAvatarsSetting();
+  const [alternativeSidebar] = useAlternativeSidebarSetting();
 
   const tombstoneEvent = useStateEvent(space, StateEvent.RoomTombstone);
   const selectedRoomId = useSelectedRoom();
@@ -474,8 +504,8 @@ export function Space() {
     getSpaceRoomPath(spaceIdOrAlias, getCanonicalAliasOrRoomId(mx, roomId));
 
   return (
-    <PageNav>
-      <SpaceHeader />
+    <PageNav size={alternativeSidebar ? '500' : '400'}>
+      <SpaceHeader searchSelected={searchSelected} />
       <PageNavContent scrollRef={scrollRef}>
         <Box direction="Column" gap="300">
           {tombstoneEvent && (
@@ -495,22 +525,6 @@ export function Space() {
                     <Box as="span" grow="Yes">
                       <Text as="span" size="Inherit" truncate>
                         Lobby
-                      </Text>
-                    </Box>
-                  </Box>
-                </NavItemContent>
-              </NavLink>
-            </NavItem>
-            <NavItem variant="Background" radii="400" aria-selected={searchSelected}>
-              <NavLink to={getSpaceSearchPath(getCanonicalAliasOrRoomId(mx, space.roomId))}>
-                <NavItemContent>
-                  <Box as="span" grow="Yes" alignItems="Center" gap="200">
-                    <Avatar size="200" radii="400">
-                      <Icon src={Icons.Search} size="100" filled={searchSelected} />
-                    </Avatar>
-                    <Box as="span" grow="Yes">
-                      <Text as="span" size="Inherit" truncate>
-                        Message Search
                       </Text>
                     </Box>
                   </Box>

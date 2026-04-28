@@ -35,7 +35,12 @@ import { useIsDirectRoom, useRoom } from '../../hooks/useRoom';
 import { useSetting } from '../../state/hooks/settings';
 import { settingsAtom } from '../../state/settings';
 import { useSpaceOptionally } from '../../hooks/useSpace';
-import { getHomeSearchPath, getSpaceSearchPath, withSearchParam } from '../../pages/pathUtils';
+import {
+  getHomePath,
+  getHomeSearchPath,
+  getSpaceSearchPath,
+  withSearchParam,
+} from '../../pages/pathUtils';
 import { getCanonicalAliasOrRoomId, isRoomAlias, mxcUrlToHttp } from '../../utils/matrix';
 import { _SearchPathSearchParams } from '../../pages/paths';
 import * as css from './RoomViewHeader.css';
@@ -68,6 +73,7 @@ import { useRoomPermissions } from '../../hooks/useRoomPermissions';
 import { InviteUserPrompt } from '../../components/invite-user-prompt';
 import { ContainerColor } from '../../styles/ContainerColor.css';
 import { RoomSettingsPage } from '../../state/roomSettings';
+import { useAlternativeSidebarSetting } from '../settings/lumiere-settings/store';
 
 type RoomMenuProps = {
   room: Room;
@@ -296,6 +302,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
   const [pinMenuAnchor, setPinMenuAnchor] = useState<RectCords>();
   const direct = useIsDirectRoom();
+  const [alternativeSidebar] = useAlternativeSidebarSetting();
 
   const pinnedEvents = useRoomPinnedEvents(room);
   const encryptionEvent = useStateEvent(room, StateEvent.RoomEncryption);
@@ -336,6 +343,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
     }
     setPeopleDrawer(!peopleDrawer);
   };
+  const handleBackHome = () => navigate(getHomePath());
 
   return (
     <PageHeader
@@ -343,7 +351,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
       balance={screenSize === ScreenSize.Mobile}
     >
       <Box grow="Yes" gap="300">
-        {screenSize === ScreenSize.Mobile && (
+        {screenSize === ScreenSize.Mobile && !alternativeSidebar && (
           <BackRouteHandler>
             {(onBack) => (
               <Box shrink="No" alignItems="Center">
@@ -355,6 +363,13 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
           </BackRouteHandler>
         )}
         <Box grow="Yes" alignItems="Center" gap="300">
+          {alternativeSidebar && (
+            <Box shrink="No" alignItems="Center">
+              <IconButton fill="None" onClick={handleBackHome}>
+                <Icon src={Icons.ArrowLeft} />
+              </IconButton>
+            </Box>
+          )}
           {screenSize !== ScreenSize.Mobile && (
             <Avatar size="300">
               <RoomAvatar
