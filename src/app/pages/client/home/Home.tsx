@@ -266,24 +266,35 @@ function HomeHeader({
   let logoMarginLeft = '7px';
   let logoMarginRight = '7px';
   if (screenSize === ScreenSize.Mobile) {
-    logoMarginLeft = '9px';
-    logoMarginRight = '9px';
+    logoMarginLeft = '10px';
+    logoMarginRight = '11px';
   } else if (screenSize === ScreenSize.Desktop) {
-    logoMarginLeft = '14px';
-    logoMarginRight = '6px';
+    logoMarginLeft = '17px';
+    logoMarginRight = '7px';
   }
 
   let compactLogoMarginLeft = '5px';
   let compactLogoMarginRight = '5px';
   if (screenSize === ScreenSize.Mobile) {
     compactLogoMarginLeft = '6px';
-    compactLogoMarginRight = '6px';
+    compactLogoMarginRight = '7px';
   } else if (screenSize === ScreenSize.Tablet) {
     compactLogoMarginLeft = '0px';
     compactLogoMarginRight = '0px';
   } else if (screenSize === ScreenSize.Desktop) {
-    compactLogoMarginLeft = '8px';
+    compactLogoMarginLeft = '10px';
     compactLogoMarginRight = '0px';
+  }
+  let mobileTitleGroupOffset: string | undefined;
+  if (alternativeSidebar) {
+    if (screenSize === ScreenSize.Mobile) mobileTitleGroupOffset = '4px';
+    else if (screenSize === ScreenSize.Tablet) mobileTitleGroupOffset = '2px';
+  }
+  let mobileTitleTextOffset: string | undefined;
+  if (alternativeSidebar) {
+    if (screenSize === ScreenSize.Mobile) mobileTitleTextOffset = '1px';
+    else if (screenSize === ScreenSize.Tablet) mobileTitleTextOffset = compactChats ? '1px' : '2px';
+    else if (screenSize === ScreenSize.Desktop) mobileTitleTextOffset = compactChats ? '1px' : '2px';
   }
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
   const [settings, setSettings] = useState(false);
@@ -301,7 +312,7 @@ function HomeHeader({
       <PageNavHeader>
         <Box alignItems="Center" grow="Yes" gap="300">
           <Box grow="Yes">
-            <Box alignItems="Center" gap="300">
+            <Box alignItems="Center" gap="300" style={{ marginLeft: mobileTitleGroupOffset }}>
               {alternativeSidebar && (
                 <img
                   src={LogoSVG}
@@ -314,7 +325,15 @@ function HomeHeader({
                   }}
                 />
               )}
-              <Text size="H4" truncate style={alternativeSidebar ? { fontWeight: 500 } : undefined}>
+              <Text
+                size="H4"
+                truncate
+                style={
+                  alternativeSidebar
+                    ? { fontWeight: 500, marginLeft: mobileTitleTextOffset }
+                    : undefined
+                }
+              >
                 {alternativeSidebar ? 'Lumiere' : 'Home'}
               </Text>
             </Box>
@@ -447,6 +466,13 @@ function HomeUnverifiedItem({
   } else {
     avatarSize = compactChats ? '200' : '300';
   }
+  let avatarSizePx = 50;
+  if (avatarSize === '200') avatarSizePx = 28;
+  else if (avatarSize === '300') avatarSizePx = 43;
+  const unverifiedAvatarStyle = {
+    width: toRem(avatarSizePx),
+    height: toRem(avatarSizePx),
+  };
 
   return (
     <>
@@ -465,7 +491,11 @@ function HomeUnverifiedItem({
             }}
           >
             <Box as="span" grow="Yes" alignItems="Center" gap="300">
-              <Avatar size={avatarSize} radii={roundAvatars ? 'Pill' : '400'}>
+              <Avatar
+                size={avatarSize}
+                radii={roundAvatars ? 'Pill' : '400'}
+                style={unverifiedAvatarStyle}
+              >
                 <Icon style={{ color: unverifiedColor }} src={Icons.ShieldUser} />
               </Avatar>
               <Box as="span" grow="Yes" direction="Column" gap="50">

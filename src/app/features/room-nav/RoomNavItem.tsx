@@ -554,6 +554,25 @@ export function RoomNavItem({
   } else {
     avatarSize = compactChats ? '200' : '300';
   }
+  let alternativeAvatarStyle:
+    | {
+        width: string;
+        height: string;
+      }
+    | undefined;
+  if (alternativeSidebarLayout) {
+    let avatarSizePx = 50;
+    if (avatarSize === '200') avatarSizePx = 28;
+    else if (avatarSize === '300') avatarSizePx = 43;
+    alternativeAvatarStyle = {
+      width: toRem(avatarSizePx),
+      height: toRem(avatarSizePx),
+    };
+  }
+  const avatarPlaceholderSize = alternativeSidebarLayout ? 'H2' : 'H6';
+  const avatarPlaceholderTransform = alternativeSidebarLayout
+    ? 'translate(-50%, -50%) translate(0.25px, 0.5px)'
+    : 'translate(-50%, -50%)';
   const alternativeHorizontalPadding =
     screenSize === ScreenSize.Desktop ? config.space.S300 : config.space.S100;
   let contentPaddingStyle:
@@ -597,7 +616,7 @@ export function RoomNavItem({
           }}
         >
           <Box as="span" grow="Yes" alignItems="Center" gap="300">
-            <Avatar size={avatarSize} radii={roundAvatars ? 'Pill' : '400'}>
+            <Avatar size={avatarSize} radii={roundAvatars ? 'Pill' : '400'} style={alternativeAvatarStyle}>
               {showAvatar ? (
                 <RoomAvatar
                   roomId={room.roomId}
@@ -608,9 +627,22 @@ export function RoomNavItem({
                   }
                   alt={roomName}
                   renderFallback={() => (
-                    <Text as="span" size="H6">
-                      {nameInitials(roomName)}
-                    </Text>
+                    <Box as="span" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                      <Text
+                        as="span"
+                        size={avatarPlaceholderSize}
+                        style={{
+                          lineHeight: 1,
+                          fontWeight: config.fontWeight.W400,
+                          position: 'absolute',
+                          left: '50%',
+                          top: '50%',
+                          transform: avatarPlaceholderTransform,
+                        }}
+                      >
+                        {nameInitials(roomName)}
+                      </Text>
+                    </Box>
                   )}
                 />
               ) : (
