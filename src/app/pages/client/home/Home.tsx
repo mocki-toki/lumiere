@@ -42,6 +42,7 @@ import {
   getHomeRoomPath,
   getHomeSearchPath,
   getSpaceLobbyPath,
+  getSpacePath,
   withSearchParam,
 } from '../../pathUtils';
 import { getCanonicalAliasOrRoomId, getMxIdLocalPart, mxcUrlToHttp } from '../../../utils/matrix';
@@ -797,6 +798,8 @@ function HomeChangelogItem({
 const HOME_CATEGORY_ID = makeNavCategoryId('home', 'room');
 export function Home() {
   const mx = useMatrixClient();
+  const screenSize = useScreenSizeContext();
+  const mobile = screenSize === ScreenSize.Mobile;
   useNavToActivePathMapper('home');
   const [alternativeSidebar] = useAlternativeSidebarSetting();
   const [showLastMessage] = useShowLastMessageSetting();
@@ -1010,7 +1013,9 @@ export function Home() {
                           previewSourceRoom={previewSourceRoom}
                           linkPath={
                             isSpace
-                              ? getSpaceLobbyPath(getCanonicalAliasOrRoomId(mx, roomId))
+                              ? mobile
+                                ? getSpacePath(getCanonicalAliasOrRoomId(mx, roomId))
+                                : getSpaceLobbyPath(getCanonicalAliasOrRoomId(mx, roomId))
                               : getHomeRoomPath(getCanonicalAliasOrRoomId(mx, roomId))
                           }
                           notificationMode={getRoomNotificationMode(

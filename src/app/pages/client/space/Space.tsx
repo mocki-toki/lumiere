@@ -50,6 +50,7 @@ import {
 import {
   getHomePath,
   getSpaceLobbyPath,
+  getSpacePath,
   getSpaceRoomPath,
   getSpaceSearchPath,
 } from '../../pathUtils';
@@ -777,7 +778,9 @@ export function Space() {
                         previewSourceRoom={previewSourceRoom}
                         linkPath={
                           isSpaceItem
-                            ? getSpaceLobbyPath(getCanonicalAliasOrRoomId(mx, roomId))
+                            ? mobile
+                              ? getSpacePath(getCanonicalAliasOrRoomId(mx, roomId))
+                              : getSpaceLobbyPath(getCanonicalAliasOrRoomId(mx, roomId))
                             : getToLink(roomId)
                         }
                         notificationMode={getRoomNotificationMode(notificationPreferences, room.roomId)}
