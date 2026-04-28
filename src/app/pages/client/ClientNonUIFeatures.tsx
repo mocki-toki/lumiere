@@ -26,6 +26,7 @@ import { getMxIdLocalPart, mxcUrlToHttp } from '../../utils/matrix';
 import { useSelectedRoom } from '../../hooks/router/useSelectedRoom';
 import { useInboxNotificationsSelected } from '../../hooks/router/useInbox';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
+import { ScreenSize, useScreenSize } from '../../hooks/useScreenSize';
 
 function SystemEmojiFeature() {
   const [twitterEmoji] = useSetting(settingsAtom, 'twitterEmoji');
@@ -41,6 +42,13 @@ function SystemEmojiFeature() {
 
 function PageZoomFeature() {
   const [pageZoom] = useSetting(settingsAtom, 'pageZoom');
+  const screenSize = useScreenSize();
+
+  // Keep mobile/tablet UI at native scale regardless of desktop page zoom preference.
+  if (screenSize === ScreenSize.Mobile || screenSize === ScreenSize.Tablet) {
+    document.documentElement.style.removeProperty('font-size');
+    return null;
+  }
 
   if (pageZoom === 100) {
     document.documentElement.style.removeProperty('font-size');
