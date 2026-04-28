@@ -738,7 +738,7 @@ export function Home() {
                         <RoomNavItem
                           room={room}
                           selected={selected}
-                          showAvatar={isDirect || isSpace}
+                          showAvatar={alternativeSidebar ? true : isDirect || isSpace}
                           direct={isDirect}
                           showLastMessage={alternativeSidebar && showLastMessage}
                           compactChats={!alternativeSidebar || compactChats}

@@ -86,8 +86,7 @@ import { stopPropagation } from '../../../utils/keyboard';
 import { getMatrixToRoom } from '../../../plugins/matrix-to';
 import { getViaServers } from '../../../plugins/via-servers';
 import { getSpaceChildren } from '../../../utils/room';
-import { RoomAvatar } from '../../../components/room-avatar';
-import { nameInitials } from '../../../utils/common';
+import { RoomAvatar, RoomIcon } from '../../../components/room-avatar';
 import { useMediaAuthentication } from '../../../hooks/useMediaAuthentication';
 import { useSetting } from '../../../state/hooks/settings';
 import { settingsAtom } from '../../../state/settings';
@@ -648,7 +647,15 @@ export function Space() {
   const { rooms: hierarchyRooms } = useFetchSpaceHierarchyLevel(space.roomId, alternativeSidebar);
   const unjoinedRoomSummaries = useMemo(
     () => Array.from(hierarchyRooms.values()).reduce<
-      { roomId: string; name?: string; alias?: string; memberCount?: number; avatarUrl?: string }[]
+      {
+        roomId: string;
+        name?: string;
+        alias?: string;
+        memberCount?: number;
+        avatarUrl?: string;
+        roomType?: string;
+        joinRule?: JoinRule;
+      }[]
     >((acc, room) => {
       if (room.room_type === 'm.space') return acc;
       const roomId = getHierarchyRoomId(room);
@@ -659,6 +666,8 @@ export function Space() {
         alias: getHierarchyRoomAlias(room),
         memberCount: getHierarchyRoomMemberCount(room),
         avatarUrl: getHierarchyRoomAvatarUrl(room),
+        roomType: room.room_type,
+        joinRule: room.join_rule as JoinRule | undefined,
       });
       return acc;
     }, []),
@@ -810,22 +819,7 @@ export function Space() {
                                 }
                                 alt={room.name || room.alias || room.roomId}
                                 renderFallback={() => (
-                                  <Box as="span" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                                    <Text
-                                      as="span"
-                                      size="H2"
-                                      style={{
-                                        lineHeight: 1,
-                                        fontWeight: config.fontWeight.W400,
-                                        position: 'absolute',
-                                        left: '50%',
-                                        top: '50%',
-                                        transform: 'translate(-50%, -50%) translate(0.25px, 0.5px)',
-                                      }}
-                                    >
-                                      {nameInitials(room.name || room.alias || room.roomId)}
-                                    </Text>
-                                  </Box>
+                                  <RoomIcon size={compactChats ? '100' : '200'} roomType={room.roomType} joinRule={room.joinRule} />
                                 )}
                               />
                             </Avatar>

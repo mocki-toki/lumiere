@@ -23,8 +23,8 @@ import { useAtom, useAtomValue } from 'jotai';
 import { NavItem, NavItemContent, NavItemOptions, NavLink } from '../../components/nav';
 import { UnreadBadge, UnreadBadgeCenter } from '../../components/unread-badge';
 import { RoomAvatar, RoomIcon } from '../../components/room-avatar';
+import { UserAvatar } from '../../components/user-avatar';
 import { getDirectRoomAvatarUrl, getRoomAvatarUrl, getStateEvent } from '../../utils/room';
-import { nameInitials } from '../../utils/common';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useRoomUnread } from '../../state/hooks/unread';
 import { roomToUnreadAtom } from '../../state/room/roomToUnread';
@@ -569,10 +569,7 @@ export function RoomNavItem({
       height: toRem(avatarSizePx),
     };
   }
-  const avatarPlaceholderSize = alternativeSidebarLayout ? 'H2' : 'H6';
-  const avatarPlaceholderTransform = alternativeSidebarLayout
-    ? 'translate(-50%, -50%) translate(0.25px, 0.5px)'
-    : 'translate(-50%, -50%)';
+  const userFallbackIconSize = alternativeSidebarLayout && !compactChats ? '200' : '100';
   const alternativeHorizontalPadding =
     screenSize === ScreenSize.Desktop ? config.space.S300 : config.space.S100;
   let contentPaddingStyle:
@@ -591,6 +588,36 @@ export function RoomNavItem({
       paddingTop: config.space.S100,
       paddingBottom: config.space.S100,
     };
+  }
+  let avatarContent = (
+    <RoomIcon
+      style={{
+        opacity: unread ? config.opacity.P500 : config.opacity.P300,
+      }}
+      filled={selected}
+      size="100"
+      joinRule={room.getJoinRule()}
+      roomType={room.getType()}
+    />
+  );
+  if (showAvatar) {
+    avatarContent = direct ? (
+      <UserAvatar
+        userId={room.getAvatarFallbackMember()?.userId ?? room.roomId}
+        src={getDirectRoomAvatarUrl(mx, room, 96, useAuthentication)}
+        alt={roomName}
+        renderFallback={() => <Icon size={userFallbackIconSize} src={Icons.User} filled />}
+      />
+    ) : (
+      <RoomAvatar
+        roomId={room.roomId}
+        src={getRoomAvatarUrl(mx, room, 96, useAuthentication)}
+        alt={roomName}
+        renderFallback={() => (
+          <RoomIcon size={userFallbackIconSize} joinRule={room.getJoinRule()} roomType={room.getType()} />
+        )}
+      />
+    );
   }
 
   return (
@@ -617,45 +644,7 @@ export function RoomNavItem({
         >
           <Box as="span" grow="Yes" alignItems="Center" gap="300">
             <Avatar size={avatarSize} radii={roundAvatars ? 'Pill' : '400'} style={alternativeAvatarStyle}>
-              {showAvatar ? (
-                <RoomAvatar
-                  roomId={room.roomId}
-                  src={
-                    direct
-                      ? getDirectRoomAvatarUrl(mx, room, 96, useAuthentication)
-                      : getRoomAvatarUrl(mx, room, 96, useAuthentication)
-                  }
-                  alt={roomName}
-                  renderFallback={() => (
-                    <Box as="span" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                      <Text
-                        as="span"
-                        size={avatarPlaceholderSize}
-                        style={{
-                          lineHeight: 1,
-                          fontWeight: config.fontWeight.W400,
-                          position: 'absolute',
-                          left: '50%',
-                          top: '50%',
-                          transform: avatarPlaceholderTransform,
-                        }}
-                      >
-                        {nameInitials(roomName)}
-                      </Text>
-                    </Box>
-                  )}
-                />
-              ) : (
-                <RoomIcon
-                  style={{
-                    opacity: unread ? config.opacity.P500 : config.opacity.P300,
-                  }}
-                  filled={selected}
-                  size="100"
-                  joinRule={room.getJoinRule()}
-                  roomType={room.getType()}
-                />
-              )}
+              {avatarContent}
             </Avatar>
             <Box as="span" grow="Yes" direction="Column" gap="50">
               <Text
