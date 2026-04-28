@@ -3,6 +3,7 @@ import {
   Box,
   Icon,
   Icons,
+  Line,
   Menu,
   PopOut,
   RectCords,
@@ -18,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   encodeSearchParamValueArray,
   getCreatePath,
+  getExplorePath,
   getHomeCreatePath,
   getSpacePath,
   withSearchParam,
@@ -64,6 +66,10 @@ export function AlternativeSidebarCreateFab() {
 
   const handleJoinWithAddress = () => {
     setJoinAddress(true);
+    setMenuAnchor(undefined);
+  };
+  const handleExploreCommunity = () => {
+    navigate(getExplorePath());
     setMenuAnchor(undefined);
   };
 
@@ -114,7 +120,7 @@ export function AlternativeSidebarCreateFab() {
                         <SettingTile before={<Icon size="400" src={Icons.User} />}>
                           <Text size="H6">Create Chat</Text>
                           <Text size="T300" priority="300">
-                            Start a new direct conversation.
+                            Start a new direct conversation
                           </Text>
                         </SettingTile>
                       </SequenceCard>
@@ -131,10 +137,11 @@ export function AlternativeSidebarCreateFab() {
                         <SettingTile before={<Icon size="400" src={Icons.Hash} />}>
                           <Text size="H6">Create Room</Text>
                           <Text size="T300" priority="300">
-                            Create a room for group conversations.
+                            Create a room for group conversations
                           </Text>
                         </SettingTile>
                       </SequenceCard>
+                      <Line variant="Surface" size="300" />
                       <SequenceCard
                         style={{ padding: config.space.S300 }}
                         variant="Surface"
@@ -148,7 +155,7 @@ export function AlternativeSidebarCreateFab() {
                         <SettingTile before={<Icon size="400" src={Icons.Space} />}>
                           <Text size="H6">Create Space</Text>
                           <Text size="T300" priority="300">
-                            Build a space for your community.
+                            Build a space for your community
                           </Text>
                         </SettingTile>
                       </SequenceCard>
@@ -165,7 +172,24 @@ export function AlternativeSidebarCreateFab() {
                         <SettingTile before={<Icon size="400" src={Icons.Link} />}>
                           <Text size="H6">Join with Address</Text>
                           <Text size="T300" priority="300">
-                            Become a part of existing community.
+                            Become a part of existing community
+                          </Text>
+                        </SettingTile>
+                      </SequenceCard>
+                      <SequenceCard
+                        style={{ padding: config.space.S300 }}
+                        variant="Surface"
+                        direction="Column"
+                        gap="100"
+                        radii="0"
+                        as="button"
+                        type="button"
+                        onClick={handleExploreCommunity}
+                      >
+                        <SettingTile before={<Icon size="400" src={Icons.Explore} />}>
+                          <Text size="H6">Explore Community</Text>
+                          <Text size="T300" priority="300">
+                            Discover rooms and spaces to join
                           </Text>
                         </SettingTile>
                       </SequenceCard>
