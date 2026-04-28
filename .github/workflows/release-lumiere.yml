@@ -113,13 +113,13 @@ jobs:
           printf 'lumiere.mktk.cc\n' > dist/CNAME
 
       - name: Setup Pages
-        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745 # v5.0.0
+        uses: actions/configure-pages@v5
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@d7f561429d3a7e17f84cc5b28794b171d0a88c50 # v4.0.5
+        uses: actions/deploy-pages@v4
