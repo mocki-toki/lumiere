@@ -424,7 +424,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
             >
               {(triggerRef) => (
                 <IconButton fill="None" ref={triggerRef} onClick={handleSearchClick}>
-                  <Icon size="400" src={Icons.Search} />
+                  <Icon size="200" src={Icons.Search} />
                 </IconButton>
               )}
             </TooltipProvider>
@@ -463,7 +463,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
                     </Text>
                   </Badge>
                 )}
-                <Icon size="400" src={Icons.Pin} filled={!!pinMenuAnchor} />
+                <Icon size="200" src={Icons.Pin} filled={!!pinMenuAnchor} />
               </IconButton>
             )}
           </TooltipProvider>
@@ -503,7 +503,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
             >
               {(triggerRef) => (
                 <IconButton fill="None" ref={triggerRef} onClick={handleMemberToggle}>
-                  <Icon size="400" src={Icons.User} />
+                  <Icon size="200" src={Icons.User} />
                 </IconButton>
               )}
             </TooltipProvider>
@@ -526,7 +526,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
                 ref={triggerRef}
                 aria-pressed={!!menuAnchor}
               >
-                <Icon size="400" src={Icons.VerticalDots} filled={!!menuAnchor} />
+                <Icon size="200" src={Icons.VerticalDots} filled={!!menuAnchor} />
               </IconButton>
             )}
           </TooltipProvider>
