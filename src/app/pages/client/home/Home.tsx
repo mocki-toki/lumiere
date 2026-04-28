@@ -389,6 +389,8 @@ function HomeEmpty() {
 }
 
 function HomeUnverifiedItem({ compactChats, roundAvatars }: { compactChats: boolean; roundAvatars: boolean }) {
+  const screenSize = useScreenSizeContext();
+  const mobile = screenSize === ScreenSize.Mobile;
   const crossSigningActive = useCrossSigningActive();
   const mx = useMatrixClient();
   const crypto = mx.getCrypto();
@@ -409,6 +411,13 @@ function HomeUnverifiedItem({ compactChats, roundAvatars }: { compactChats: bool
   if (!hasUnverified) return null;
   const unverifiedLabel = unverified ? 'Unverified Device' : 'Unverified Devices';
   const unverifiedColor = unverified ? color.Critical.Main : color.Warning.Main;
+  const avatarSize: '200' | '300' | '400' = mobile
+    ? compactChats
+      ? '300'
+      : '400'
+    : compactChats
+      ? '200'
+      : '300';
 
   return (
     <>
@@ -427,7 +436,7 @@ function HomeUnverifiedItem({ compactChats, roundAvatars }: { compactChats: bool
             }}
           >
             <Box as="span" grow="Yes" alignItems="Center" gap="300">
-              <Avatar size={compactChats ? '200' : '300'} radii={roundAvatars ? 'Pill' : '400'}>
+              <Avatar size={avatarSize} radii={roundAvatars ? 'Pill' : '400'}>
                 <Icon style={{ color: unverifiedColor }} src={Icons.ShieldUser} />
               </Avatar>
               <Box as="span" grow="Yes">
