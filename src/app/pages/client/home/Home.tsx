@@ -412,46 +412,45 @@ function HomeUnverifiedItem({ compactChats, roundAvatars }: { compactChats: bool
 
   return (
     <>
-      <NavCategory>
-        <NavItem variant="Background" radii="400" aria-selected={settings}>
-          <NavButton onClick={() => setSettings(true)}>
-            <NavItemContent
-              style={{
-                paddingLeft: config.space.S100,
-                ...(compactChats
-                  ? undefined
-                  : {
-                      paddingTop: config.space.S100,
-                      paddingBottom: config.space.S100,
-                    }),
-              }}
-            >
-              <Box as="span" grow="Yes" alignItems="Center" gap="300">
-                <Avatar size={compactChats ? '200' : '300'} radii={roundAvatars ? 'Pill' : '400'}>
-                  <Icon style={{ color: unverifiedColor }} src={Icons.ShieldUser} />
-                </Avatar>
-                <Box as="span" grow="Yes">
-                  <Text
-                    as="span"
-                    size={compactChats ? 'Inherit' : 'T400'}
-                    style={{ fontWeight: 500, color: unverifiedColor }}
-                    truncate
-                  >
-                    {unverifiedLabel}
-                  </Text>
-                </Box>
-                {!unverified && unverifiedDeviceCount && unverifiedDeviceCount > 0 && (
-                  <Badge variant="Warning" size="400" fill="Solid" radii="Pill" outlined={false}>
-                    <Text as="span" size="L400">
-                      {unverifiedDeviceCount}
-                    </Text>
-                  </Badge>
-                )}
+      <NavItem
+        variant="Background"
+        radii="400"
+        aria-selected={settings}
+        style={{ margin: 0, marginBottom: config.space.S100 }}
+      >
+        <NavButton onClick={() => setSettings(true)}>
+          <NavItemContent
+            style={{
+              paddingLeft: config.space.S100,
+              paddingTop: compactChats ? config.space.S100 : config.space.S200,
+              paddingBottom: compactChats ? config.space.S100 : config.space.S200,
+            }}
+          >
+            <Box as="span" grow="Yes" alignItems="Center" gap="300">
+              <Avatar size={compactChats ? '200' : '300'} radii={roundAvatars ? 'Pill' : '400'}>
+                <Icon style={{ color: unverifiedColor }} src={Icons.ShieldUser} />
+              </Avatar>
+              <Box as="span" grow="Yes">
+                <Text
+                  as="span"
+                  size={compactChats ? 'Inherit' : 'T400'}
+                  style={{ fontWeight: 500, color: unverifiedColor }}
+                  truncate
+                >
+                  {unverifiedLabel}
+                </Text>
               </Box>
-            </NavItemContent>
-          </NavButton>
-        </NavItem>
-      </NavCategory>
+              {!unverified && unverifiedDeviceCount && unverifiedDeviceCount > 0 && (
+                <Badge variant="Warning" size="400" fill="Solid" radii="Pill" outlined={false}>
+                  <Text as="span" size="L400">
+                    {unverifiedDeviceCount}
+                  </Text>
+                </Badge>
+              )}
+            </Box>
+          </NavItemContent>
+        </NavButton>
+      </NavItem>
       {settings && (
         <Modal500 requestClose={() => setSettings(false)}>
           <Settings initialPage={SettingsPages.DevicesPage} requestClose={() => setSettings(false)} />
@@ -548,10 +547,7 @@ export function Home() {
           <HomeEmpty />
         ) : (
           <PageNavContent scrollRef={scrollRef}>
-            <Box direction="Column" gap="300">
-              {alternativeSidebar && (
-                <HomeUnverifiedItem compactChats={compactChats} roundAvatars={roundAvatars} />
-              )}
+            <Box direction="Column" gap={alternativeSidebar ? '0' : '300'}>
               {!alternativeSidebar && (
                 <NavCategory>
                   <NavItem variant="Background" radii="400" aria-selected={createRoomSelected}>
@@ -611,6 +607,9 @@ export function Home() {
                 </NavCategory>
               )}
               <NavCategory>
+                {alternativeSidebar && (
+                  <HomeUnverifiedItem compactChats={compactChats} roundAvatars={roundAvatars} />
+                )}
                 {!alternativeSidebar && (
                   <NavCategoryHeader>
                     <RoomNavCategoryButton
@@ -661,6 +660,7 @@ export function Home() {
                           direct={isDirect}
                           showLastMessage={alternativeSidebar && showLastMessage}
                           compactChats={!alternativeSidebar || compactChats}
+                          alternativeSidebarLayout={alternativeSidebar}
                           roundAvatars={roundAvatars}
                           previewSourceRoom={previewSourceRoom}
                           linkPath={getHomeRoomPath(getCanonicalAliasOrRoomId(mx, roomId))}

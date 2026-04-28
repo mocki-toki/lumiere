@@ -400,6 +400,7 @@ type RoomNavItemProps = {
   previewSourceRoom?: Room;
   compactChats?: boolean;
   roundAvatars?: boolean;
+  alternativeSidebarLayout?: boolean;
 };
 export function RoomNavItem({
   room,
@@ -410,6 +411,7 @@ export function RoomNavItem({
   previewSourceRoom,
   compactChats = true,
   roundAvatars = false,
+  alternativeSidebarLayout = false,
   notificationMode,
   linkPath,
 }: RoomNavItemProps) {
@@ -535,16 +537,37 @@ export function RoomNavItem({
     }
   };
   let itemMarginBottom: string | undefined;
-  if (showLastMessage) {
-    itemMarginBottom = compactChats ? config.space.S100 : config.space.S200;
-  } else if (!compactChats) {
-    itemMarginBottom = config.space.S200;
+  if (!alternativeSidebarLayout) {
+    if (showLastMessage) {
+      itemMarginBottom = compactChats ? config.space.S100 : config.space.S200;
+    } else if (!compactChats) {
+      itemMarginBottom = config.space.S200;
+    }
+  } else {
+    itemMarginBottom = config.space.S100;
   }
   let avatarSize: '200' | '300' | '400';
   if (mobile) {
     avatarSize = compactChats ? '300' : '400';
   } else {
     avatarSize = compactChats ? '200' : '300';
+  }
+  let contentPaddingStyle:
+    | {
+        paddingTop: string;
+        paddingBottom: string;
+      }
+    | undefined;
+  if (alternativeSidebarLayout) {
+    contentPaddingStyle = {
+      paddingTop: compactChats ? config.space.S100 : config.space.S200,
+      paddingBottom: compactChats ? config.space.S100 : config.space.S200,
+    };
+  } else if (!compactChats) {
+    contentPaddingStyle = {
+      paddingTop: config.space.S100,
+      paddingBottom: config.space.S100,
+    };
   }
 
   return (
@@ -554,7 +577,10 @@ export function RoomNavItem({
       highlight={unread !== undefined}
       aria-selected={selected}
       data-hover={!!menuAnchor}
-      style={{ marginBottom: itemMarginBottom }}
+      style={{
+        margin: alternativeSidebarLayout ? 0 : undefined,
+        marginBottom: itemMarginBottom,
+      }}
       onContextMenu={handleContextMenu}
       {...hoverProps}
       {...focusWithinProps}
@@ -563,12 +589,7 @@ export function RoomNavItem({
         <NavItemContent
           style={{
             paddingLeft: config.space.S100,
-            ...(compactChats
-              ? undefined
-              : {
-                  paddingTop: config.space.S100,
-                  paddingBottom: config.space.S100,
-                }),
+            ...contentPaddingStyle,
           }}
         >
           <Box as="span" grow="Yes" alignItems="Center" gap="300">
