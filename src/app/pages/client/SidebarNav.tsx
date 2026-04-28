@@ -20,6 +20,8 @@ import {
 import { CreateTab } from './sidebar/CreateTab';
 import { useAlternativeSidebarSetting } from '../../features/settings/lumiere-settings/store';
 import { useHomeSelected } from '../../hooks/router/useHomeSelected';
+import { useSelectedSpace } from '../../hooks/router/useSelectedSpace';
+import { useInboxSelected } from '../../hooks/router/useInbox';
 
 type SidebarNavProps = {
   embedded?: boolean;
@@ -29,7 +31,10 @@ export function SidebarNav({ embedded }: SidebarNavProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [alternativeSidebar] = useAlternativeSidebarSetting();
   const homeSelected = useHomeSelected();
-  const shouldHideInLayout = alternativeSidebar && homeSelected && !embedded;
+  const selectedSpaceId = useSelectedSpace();
+  const inboxSelected = useInboxSelected();
+  const shouldHideInLayout =
+    alternativeSidebar && (homeSelected || !!selectedSpaceId || inboxSelected) && !embedded;
 
   if (shouldHideInLayout) return null;
 

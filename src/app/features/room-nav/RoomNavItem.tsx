@@ -23,8 +23,8 @@ import { useAtom, useAtomValue } from 'jotai';
 import { NavItem, NavItemContent, NavItemOptions, NavLink } from '../../components/nav';
 import { UnreadBadge, UnreadBadgeCenter } from '../../components/unread-badge';
 import { RoomAvatar, RoomIcon } from '../../components/room-avatar';
+import { UserAvatar } from '../../components/user-avatar';
 import { getDirectRoomAvatarUrl, getRoomAvatarUrl, getStateEvent } from '../../utils/room';
-import { nameInitials } from '../../utils/common';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useRoomUnread } from '../../state/hooks/unread';
 import { roomToUnreadAtom } from '../../state/room/roomToUnread';
@@ -503,6 +503,8 @@ export function RoomNavItem({
   };
 
   const optionsVisible = hover || !!menuAnchor;
+  const menuIconSize =
+    alternativeSidebarLayout && !(screenSize === ScreenSize.Desktop && compactChats) ? '200' : '50';
   const callSession = useCallSession(room);
   const callMembers = useCallMembers(room, callSession);
   const startCall = useCallStart(direct);
@@ -552,6 +554,24 @@ export function RoomNavItem({
   } else {
     avatarSize = compactChats ? '200' : '300';
   }
+  let alternativeAvatarStyle:
+    | {
+        width: string;
+        height: string;
+      }
+    | undefined;
+  if (alternativeSidebarLayout) {
+    let avatarSizePx = 50;
+    if (avatarSize === '200') avatarSizePx = 28;
+    else if (avatarSize === '300') avatarSizePx = 43;
+    alternativeAvatarStyle = {
+      width: toRem(avatarSizePx),
+      height: toRem(avatarSizePx),
+    };
+  }
+  const userFallbackIconSize = alternativeSidebarLayout && !compactChats ? '200' : '100';
+  const alternativeHorizontalPadding =
+    screenSize === ScreenSize.Desktop ? config.space.S300 : config.space.S100;
   let contentPaddingStyle:
     | {
         paddingTop: string;
@@ -568,6 +588,36 @@ export function RoomNavItem({
       paddingTop: config.space.S100,
       paddingBottom: config.space.S100,
     };
+  }
+  let avatarContent = (
+    <RoomIcon
+      style={{
+        opacity: unread ? config.opacity.P500 : config.opacity.P300,
+      }}
+      filled={selected}
+      size="100"
+      joinRule={room.getJoinRule()}
+      roomType={room.getType()}
+    />
+  );
+  if (showAvatar) {
+    avatarContent = direct ? (
+      <UserAvatar
+        userId={room.getAvatarFallbackMember()?.userId ?? room.roomId}
+        src={getDirectRoomAvatarUrl(mx, room, 96, useAuthentication)}
+        alt={roomName}
+        renderFallback={() => <Icon size={userFallbackIconSize} src={Icons.User} filled />}
+      />
+    ) : (
+      <RoomAvatar
+        roomId={room.roomId}
+        src={getRoomAvatarUrl(mx, room, 96, useAuthentication)}
+        alt={roomName}
+        renderFallback={() => (
+          <RoomIcon size={userFallbackIconSize} joinRule={room.getJoinRule()} roomType={room.getType()} />
+        )}
+      />
+    );
   }
 
   return (
@@ -588,38 +638,13 @@ export function RoomNavItem({
       <NavLink to={linkPath} onClick={room.isCallRoom() ? handleStartCall : undefined}>
         <NavItemContent
           style={{
-            paddingLeft: config.space.S100,
+            paddingLeft: alternativeSidebarLayout ? alternativeHorizontalPadding : config.space.S100,
             ...contentPaddingStyle,
           }}
         >
           <Box as="span" grow="Yes" alignItems="Center" gap="300">
-            <Avatar size={avatarSize} radii={roundAvatars ? 'Pill' : '400'}>
-              {showAvatar ? (
-                <RoomAvatar
-                  roomId={room.roomId}
-                  src={
-                    direct
-                      ? getDirectRoomAvatarUrl(mx, room, 96, useAuthentication)
-                      : getRoomAvatarUrl(mx, room, 96, useAuthentication)
-                  }
-                  alt={roomName}
-                  renderFallback={() => (
-                    <Text as="span" size="H6">
-                      {nameInitials(roomName)}
-                    </Text>
-                  )}
-                />
-              ) : (
-                <RoomIcon
-                  style={{
-                    opacity: unread ? config.opacity.P500 : config.opacity.P300,
-                  }}
-                  filled={selected}
-                  size="100"
-                  joinRule={room.getJoinRule()}
-                  roomType={room.getType()}
-                />
-              )}
+            <Avatar size={avatarSize} radii={roundAvatars ? 'Pill' : '400'} style={alternativeAvatarStyle}>
+              {avatarContent}
             </Avatar>
             <Box as="span" grow="Yes" direction="Column" gap="50">
               <Text
@@ -707,7 +732,7 @@ export function RoomNavItem({
               size="300"
               radii="300"
             >
-              <Icon size={alternativeSidebarLayout ? '200' : '50'} src={Icons.VerticalDots} />
+              <Icon size={menuIconSize} src={Icons.VerticalDots} />
             </IconButton>
           </PopOut>
         </NavItemOptions>

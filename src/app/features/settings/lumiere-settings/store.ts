@@ -8,6 +8,8 @@ type LumiereSettingsStore = {
   showLastMessage: boolean;
   compactChats: boolean;
   roundAvatars: boolean;
+  neverShowChangelog: boolean;
+  changelogDismissedForVersion: string;
 };
 
 const defaultLumiereSettings: LumiereSettingsStore = {
@@ -15,6 +17,8 @@ const defaultLumiereSettings: LumiereSettingsStore = {
   showLastMessage: true,
   compactChats: false,
   roundAvatars: true,
+  neverShowChangelog: false,
+  changelogDismissedForVersion: '',
 };
 
 export const getLumiereSettings = (): LumiereSettingsStore => {
@@ -154,4 +158,67 @@ export const useRoundAvatarsSetting = (): [boolean, (value: boolean) => void] =>
   };
 
   return [roundAvatars, updateRoundAvatars];
+};
+
+export const useNeverShowChangelogSetting = (): [boolean, (value: boolean) => void] => {
+  const [neverShowChangelog, setNeverShowChangelog] = useState<boolean>(
+    () => getLumiereSettings().neverShowChangelog
+  );
+
+  useEffect(() => {
+    const syncSettings = () => {
+      setNeverShowChangelog(getLumiereSettings().neverShowChangelog);
+    };
+
+    window.addEventListener('storage', syncSettings);
+    window.addEventListener(LUMIERE_SETTINGS_CHANGE_EVENT, syncSettings);
+
+    return () => {
+      window.removeEventListener('storage', syncSettings);
+      window.removeEventListener(LUMIERE_SETTINGS_CHANGE_EVENT, syncSettings);
+    };
+  }, []);
+
+  const updateNeverShowChangelog = (value: boolean) => {
+    setNeverShowChangelog(value);
+    setLumiereSettings({
+      ...getLumiereSettings(),
+      neverShowChangelog: value,
+    });
+  };
+
+  return [neverShowChangelog, updateNeverShowChangelog];
+};
+
+export const useChangelogDismissedForVersionSetting = (): [
+  string,
+  (value: string) => void,
+] => {
+  const [changelogDismissedForVersion, setChangelogDismissedForVersion] = useState<string>(
+    () => getLumiereSettings().changelogDismissedForVersion
+  );
+
+  useEffect(() => {
+    const syncSettings = () => {
+      setChangelogDismissedForVersion(getLumiereSettings().changelogDismissedForVersion);
+    };
+
+    window.addEventListener('storage', syncSettings);
+    window.addEventListener(LUMIERE_SETTINGS_CHANGE_EVENT, syncSettings);
+
+    return () => {
+      window.removeEventListener('storage', syncSettings);
+      window.removeEventListener(LUMIERE_SETTINGS_CHANGE_EVENT, syncSettings);
+    };
+  }, []);
+
+  const updateChangelogDismissedForVersion = (value: string) => {
+    setChangelogDismissedForVersion(value);
+    setLumiereSettings({
+      ...getLumiereSettings(),
+      changelogDismissedForVersion: value,
+    });
+  };
+
+  return [changelogDismissedForVersion, updateChangelogDismissedForVersion];
 };
