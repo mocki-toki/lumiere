@@ -388,7 +388,15 @@ function HomeEmpty() {
   );
 }
 
-function HomeUnverifiedItem({ compactChats, roundAvatars }: { compactChats: boolean; roundAvatars: boolean }) {
+function HomeUnverifiedItem({
+  compactChats,
+  roundAvatars,
+  showLastMessage,
+}: {
+  compactChats: boolean;
+  roundAvatars: boolean;
+  showLastMessage: boolean;
+}) {
   const screenSize = useScreenSizeContext();
   const mobile = screenSize === ScreenSize.Mobile;
   const crossSigningActive = useCrossSigningActive();
@@ -411,13 +419,16 @@ function HomeUnverifiedItem({ compactChats, roundAvatars }: { compactChats: bool
   if (!hasUnverified) return null;
   const unverifiedLabel = unverified ? 'Unverified Device' : 'Unverified Devices';
   const unverifiedColor = unverified ? color.Critical.Main : color.Warning.Main;
-  const avatarSize: '200' | '300' | '400' = mobile
-    ? compactChats
-      ? '300'
-      : '400'
-    : compactChats
-      ? '200'
-      : '300';
+  const unverifiedSubtitleColor = unverified ? color.Critical.Main : color.Warning.Main;
+  const unverifiedSubtitle = unverified
+    ? 'Encrypted messages may be unavailable'
+    : 'Action is required to verify devices';
+  let avatarSize: '200' | '300' | '400';
+  if (mobile) {
+    avatarSize = compactChats ? '300' : '400';
+  } else {
+    avatarSize = compactChats ? '200' : '300';
+  }
 
   return (
     <>
@@ -439,7 +450,7 @@ function HomeUnverifiedItem({ compactChats, roundAvatars }: { compactChats: bool
               <Avatar size={avatarSize} radii={roundAvatars ? 'Pill' : '400'}>
                 <Icon style={{ color: unverifiedColor }} src={Icons.ShieldUser} />
               </Avatar>
-              <Box as="span" grow="Yes">
+              <Box as="span" grow="Yes" direction="Column" gap="50">
                 <Text
                   as="span"
                   size={compactChats ? 'Inherit' : 'T400'}
@@ -448,6 +459,16 @@ function HomeUnverifiedItem({ compactChats, roundAvatars }: { compactChats: bool
                 >
                   {unverifiedLabel}
                 </Text>
+                {showLastMessage && (
+                  <Text
+                    as="span"
+                    size={compactChats ? 'T200' : 'T300'}
+                    style={{ color: unverifiedSubtitleColor, opacity: 0.8 }}
+                    truncate
+                  >
+                    {unverifiedSubtitle}
+                  </Text>
+                )}
               </Box>
               {!unverified && unverifiedDeviceCount && unverifiedDeviceCount > 0 && (
                 <Badge variant="Warning" size="400" fill="Solid" radii="Pill" outlined={false}>
@@ -617,7 +638,11 @@ export function Home() {
               )}
               <NavCategory>
                 {alternativeSidebar && (
-                  <HomeUnverifiedItem compactChats={compactChats} roundAvatars={roundAvatars} />
+                  <HomeUnverifiedItem
+                    compactChats={compactChats}
+                    roundAvatars={roundAvatars}
+                    showLastMessage={showLastMessage}
+                  />
                 )}
                 {!alternativeSidebar && (
                   <NavCategoryHeader>
