@@ -503,6 +503,8 @@ export function RoomNavItem({
   };
 
   const optionsVisible = hover || !!menuAnchor;
+  const menuIconSize =
+    alternativeSidebarLayout && !(screenSize === ScreenSize.Desktop && compactChats) ? '200' : '50';
   const callSession = useCallSession(room);
   const callMembers = useCallMembers(room, callSession);
   const startCall = useCallStart(direct);
@@ -709,7 +711,7 @@ export function RoomNavItem({
               size="300"
               radii="300"
             >
-              <Icon size={alternativeSidebarLayout ? '200' : '50'} src={Icons.VerticalDots} />
+              <Icon size={menuIconSize} src={Icons.VerticalDots} />
             </IconButton>
           </PopOut>
         </NavItemOptions>
