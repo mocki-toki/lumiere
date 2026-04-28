@@ -39,6 +39,7 @@ import {
   getHomeCreatePath,
   getHomeRoomPath,
   getHomeSearchPath,
+  getSpaceLobbyPath,
   withSearchParam,
 } from '../../pathUtils';
 import { getCanonicalAliasOrRoomId, getMxIdLocalPart, mxcUrlToHttp } from '../../../utils/matrix';
@@ -714,7 +715,11 @@ export function Home() {
                           alternativeSidebarLayout={alternativeSidebar}
                           roundAvatars={roundAvatars}
                           previewSourceRoom={previewSourceRoom}
-                          linkPath={getHomeRoomPath(getCanonicalAliasOrRoomId(mx, roomId))}
+                          linkPath={
+                            isSpace
+                              ? getSpaceLobbyPath(getCanonicalAliasOrRoomId(mx, roomId))
+                              : getHomeRoomPath(getCanonicalAliasOrRoomId(mx, roomId))
+                          }
                           notificationMode={getRoomNotificationMode(
                             notificationPreferences,
                             room.roomId
