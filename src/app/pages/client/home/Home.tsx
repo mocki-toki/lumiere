@@ -262,13 +262,28 @@ function HomeHeader({
   onSearchClick: () => void;
 }) {
   const screenSize = useScreenSizeContext();
-  let logoSideMargin = '5.5px';
-  if (screenSize === ScreenSize.Mobile) logoSideMargin = '9px';
-  else if (screenSize === ScreenSize.Tablet) logoSideMargin = '7px';
+  let logoMarginLeft = '7px';
+  let logoMarginRight = '7px';
+  if (screenSize === ScreenSize.Mobile) {
+    logoMarginLeft = '9px';
+    logoMarginRight = '9px';
+  } else if (screenSize === ScreenSize.Desktop) {
+    logoMarginLeft = '14px';
+    logoMarginRight = '6px';
+  }
 
-  let compactLogoSideMargin = '0px';
-  if (screenSize === ScreenSize.Mobile) compactLogoSideMargin = '6px';
-  else if (screenSize === ScreenSize.Tablet) compactLogoSideMargin = '5px';
+  let compactLogoMarginLeft = '5px';
+  let compactLogoMarginRight = '5px';
+  if (screenSize === ScreenSize.Mobile) {
+    compactLogoMarginLeft = '6px';
+    compactLogoMarginRight = '6px';
+  } else if (screenSize === ScreenSize.Tablet) {
+    compactLogoMarginLeft = '0px';
+    compactLogoMarginRight = '0px';
+  } else if (screenSize === ScreenSize.Desktop) {
+    compactLogoMarginLeft = '8px';
+    compactLogoMarginRight = '0px';
+  }
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
   const [settings, setSettings] = useState(false);
 
@@ -293,8 +308,8 @@ function HomeHeader({
                   style={{
                     width: toRem(24),
                     height: toRem(24),
-                    marginLeft: compactChats ? compactLogoSideMargin : logoSideMargin,
-                    marginRight: compactChats ? compactLogoSideMargin : logoSideMargin,
+                    marginLeft: compactChats ? compactLogoMarginLeft : logoMarginLeft,
+                    marginRight: compactChats ? compactLogoMarginRight : logoMarginRight,
                   }}
                 />
               )}
@@ -423,6 +438,8 @@ function HomeUnverifiedItem({
   const unverifiedSubtitle = unverified
     ? 'Encrypted messages may be unavailable'
     : 'Action is required to verify devices';
+  const horizontalPadding =
+    screenSize === ScreenSize.Desktop ? config.space.S300 : config.space.S100;
   let avatarSize: '200' | '300' | '400';
   if (mobile) {
     avatarSize = compactChats ? '300' : '400';
@@ -441,7 +458,7 @@ function HomeUnverifiedItem({
         <NavButton onClick={() => setSettings(true)}>
           <NavItemContent
             style={{
-              paddingLeft: config.space.S100,
+              paddingLeft: horizontalPadding,
               paddingTop: compactChats ? config.space.S100 : config.space.S200,
               paddingBottom: compactChats ? config.space.S100 : config.space.S200,
             }}

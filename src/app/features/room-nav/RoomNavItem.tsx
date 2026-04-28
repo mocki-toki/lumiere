@@ -552,6 +552,8 @@ export function RoomNavItem({
   } else {
     avatarSize = compactChats ? '200' : '300';
   }
+  const alternativeHorizontalPadding =
+    screenSize === ScreenSize.Desktop ? config.space.S300 : config.space.S100;
   let contentPaddingStyle:
     | {
         paddingTop: string;
@@ -588,7 +590,7 @@ export function RoomNavItem({
       <NavLink to={linkPath} onClick={room.isCallRoom() ? handleStartCall : undefined}>
         <NavItemContent
           style={{
-            paddingLeft: config.space.S100,
+            paddingLeft: alternativeSidebarLayout ? alternativeHorizontalPadding : config.space.S100,
             ...contentPaddingStyle,
           }}
         >
