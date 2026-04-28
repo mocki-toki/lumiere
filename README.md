@@ -2,9 +2,84 @@
 A Matrix client fork based on Cinny, currently rebranded as Lumiere.
 - [Source Code](https://github.com/mocki-toki/lumiere)
 - [Contributing](./CONTRIBUTING.md)
+- [Fork Process Guide](./agents.md)
 
 ## Getting started
 Run locally with the commands below.
+
+## Fork Branching and Release Process
+This repository uses a fork-specific branching and release model to keep Cinny base updates isolated from Lumiere changes.
+
+### Branch roles
+- `main`:
+  - Technical mirror of Cinny base.
+  - Updated only from `upstream/dev` using fast-forward sync.
+  - No direct Lumiere feature development.
+- `dev-lumiere`:
+  - Main development/integration branch for Lumiere changes.
+  - Auto-deployed to `https://dev-lumiere.mktk.cc`.
+- `main-lumiere`:
+  - Release branch for production Lumiere.
+  - Auto-deployed to `https://lumiere.mktk.cc`.
+  - Immutable after release (no force-push/rebase).
+
+### CI workflows used for fork lifecycle
+- `.github/workflows/sync-cinny-base.yml`
+  - Trigger: weekly (`cron`) and manual (`workflow_dispatch`).
+  - Syncs `main` to `upstream/dev` via fast-forward.
+  - Creates/updates PR `main -> dev-lumiere` with label `cinny-base-sync`.
+- `.github/workflows/deploy-lumiere.yml`
+  - Trigger: push to `dev-lumiere` or `main-lumiere`.
+  - Builds and deploys Docker image to Raspberry through VPS jump host.
+- `.github/workflows/release-lumiere.yml`
+  - Trigger: push to `main-lumiere` and manual dispatch.
+  - Calculates fork release version, updates `src/app/branding/version.ts`, creates `lumiere-v*` tag and GitHub Release.
+
+### Versioning model
+- `CINNY_VERSION` and `LUMIERE_VERSION` are stored in:
+  - `src/app/branding/version.ts`
+- `CINNY_VERSION`:
+  - Sourced from `main:package.json.version` during release workflow.
+- `LUMIERE_VERSION`:
+  - Calculated from fork commits only (commits not reachable from `main`).
+  - Uses conventional commit bump rules:
+    - `BREAKING CHANGE` or `type!:` => major
+    - `feat` => minor
+    - `fix` / `perf` => patch
+    - everything else => no release bump
+- Fork release tag namespace:
+  - `lumiere-vX.Y.Z`
+
+### Daily workflow
+1. Implement features in `dev-lumiere`.
+2. Push and validate on `https://dev-lumiere.mktk.cc`.
+3. Merge weekly base sync PR (`main -> dev-lumiere`) when available.
+4. Open PR `dev-lumiere -> main-lumiere` for release-ready changes.
+5. Merge into `main-lumiere` to deploy production and publish fork release.
+
+### Upstream base update workflow
+1. Weekly workflow fetches `upstream/dev`.
+2. If base moved, `main` is fast-forwarded.
+3. Workflow opens/updates PR `main -> dev-lumiere`.
+4. Resolve conflicts in that PR and merge.
+5. Continue normal development/release cycle.
+
+### Important safety rules
+- Do not develop Lumiere features directly on `main`.
+- Do not rebase/force-push `main-lumiere` after releases.
+- Keep release commit messages conventional if they should influence version bump.
+- Use PR merges into `main-lumiere` for predictable release history.
+
+### Optional local release check
+- You can run the release calculator locally:
+  - `npm run release:lumiere`
+- This command updates `src/app/branding/version.ts` in the working tree, so run it only when you intentionally want to validate release computation behavior.
+
+### About legacy upstream release workflow
+- `prod-deploy.yml` and `semantic-release` config are inherited from Cinny.
+- Lumiere release flow is `release-lumiere.yml` + `lumiere-v*` tags.
+- Treat inherited upstream release pipeline as non-authoritative for Lumiere fork releases.
+- `prod-deploy.yml` is now guarded as a legacy manual path and requires explicit confirmation input.
 
 ## Self-hosting
 To host Lumiere on your own, build from source and serve `dist/` with your preferred web server.
