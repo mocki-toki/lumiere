@@ -252,6 +252,15 @@ function HomeHeader({
   searchSelected: boolean;
   onSearchClick: () => void;
 }) {
+  const screenSize = useScreenSizeContext();
+  const logoSideMargin =
+    screenSize === ScreenSize.Mobile
+      ? '9px'
+      : screenSize === ScreenSize.Tablet
+        ? '7px'
+        : '5.5px';
+  const compactLogoSideMargin =
+    screenSize === ScreenSize.Mobile ? '6px' : screenSize === ScreenSize.Tablet ? '5px' : '0px';
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
   const [settings, setSettings] = useState(false);
 
@@ -276,8 +285,8 @@ function HomeHeader({
                   style={{
                     width: toRem(24),
                     height: toRem(24),
-                    marginLeft: compactChats ? undefined : toRem(5.5),
-                    marginRight: compactChats ? undefined : toRem(5.5),
+                    marginLeft: compactChats ? compactLogoSideMargin : logoSideMargin,
+                    marginRight: compactChats ? compactLogoSideMargin : logoSideMargin,
                   }}
                 />
               )}
