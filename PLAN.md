@@ -1,37 +1,29 @@
-# Lumiere Fork Branching, Release, and Base Sync Plan
+# GitHub Pages Migration Plan (Implemented)
 
 ## Summary
-- `main` is a technical mirror branch for Cinny base updates (`upstream/dev -> main`, fast-forward only).
-- `dev-lumiere` is the integration/testing branch with auto-deploy to `dev-lumiere.mktk.cc`.
-- `main-lumiere` is the release branch with auto-deploy to `lumiere.mktk.cc`.
-- Fork versions are calculated only from fork commits, not from upstream base commits.
-- Fork release tags use a separate namespace: `lumiere-vX.Y.Z`.
+- Production hosting moved to GitHub Pages only.
+- Raspberry/VPS/Netlify deployment paths removed from repository workflows.
+- `main-lumiere` remains release branch and now drives production publish to `lumiere.mktk.cc`.
+- `dev-lumiere` no longer has a public deployment endpoint.
 
 ## CI/CD Changes
-- Add `sync-cinny-base.yml` workflow:
-  - Trigger: `schedule` (weekly) + `workflow_dispatch`.
-  - Update `main` from `upstream/dev` (fast-forward only).
-  - Open/update PR `main -> dev-lumiere` with label `cinny-base-sync` when base changed.
-- Add `release-lumiere.yml` workflow:
-  - Trigger: push to `main-lumiere`.
-  - Determine fork commit set since last `lumiere-v*` tag, excluding commits reachable from `main`.
-  - Compute version bump by conventional commits:
-    - `BREAKING CHANGE` or `type!:` => major
-    - `feat` => minor
-    - `fix` / `perf` => patch
-  - Update `src/app/branding/version.ts`:
-    - `CINNY_VERSION` from `main:package.json.version`
-    - `LUMIERE_VERSION` bumped release version
-  - Commit, tag, and publish GitHub release.
+- `release-lumiere.yml` now performs:
+  - fork release calculation
+  - version commit/tag/release creation
+  - static build and GitHub Pages deploy
+- `sync-cinny-base.yml` remains for weekly/manual upstream mirror sync and PR creation.
+- Removed workflows:
+  - Raspberry deploy workflow
+  - Netlify deploy workflows
+  - legacy production deploy workflow
 
-## Branching and Release Workflow
-1. Develop in `dev-lumiere` (auto-deploy to dev domain).
-2. Weekly base sync updates `main` and opens PR into `dev-lumiere`.
-3. Resolve conflicts in that PR if needed, then merge.
-4. Promote fork changes to `main-lumiere` by PR.
-5. Merge PR to `main-lumiere` to trigger release and production deployment.
+## Branch and Release Model
+1. Develop in `dev-lumiere`.
+2. Sync base via `main -> dev-lumiere` PRs.
+3. Promote to `main-lumiere` via PR.
+4. On push to `main-lumiere`, release and deploy to GitHub Pages.
 
-## Constraints and Defaults
+## Constraints
 - `main-lumiere` is immutable after release (no rebase/force-push).
-- Bump rules use conventional commits defaults (`feat`, `fix`, `perf`, `BREAKING`).
-- Fork release automation updates only `version.ts` (not `package.json.version`).
+- Version bump is conventional-commit-based from fork-only commit set.
+- Production site is only `lumiere.mktk.cc`.

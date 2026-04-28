@@ -8,19 +8,19 @@ A Matrix client fork based on Cinny, currently rebranded as Lumiere.
 Run locally with the commands below.
 
 ## Fork Branching and Release Process
-This repository uses a fork-specific branching and release model to keep Cinny base updates isolated from Lumiere changes.
+This repository uses a fork-specific branching and release model with production deployment on GitHub Pages.
 
 ### Branch roles
 - `main`:
   - Technical mirror of Cinny base.
-  - Updated only from `upstream/dev` using fast-forward sync.
-  - No direct Lumiere feature development.
+  - Updated only from `upstream/dev` via fast-forward sync.
+  - Not used for Lumiere feature development.
 - `dev-lumiere`:
-  - Main development/integration branch for Lumiere changes.
-  - Auto-deployed to `https://dev-lumiere.mktk.cc`.
+  - Integration branch for Lumiere development.
+  - No public deployment target.
 - `main-lumiere`:
   - Release branch for production Lumiere.
-  - Auto-deployed to `https://lumiere.mktk.cc`.
+  - Source of production deployments to `https://lumiere.mktk.cc`.
   - Immutable after release (no force-push/rebase).
 
 ### CI workflows used for fork lifecycle
@@ -28,12 +28,10 @@ This repository uses a fork-specific branching and release model to keep Cinny b
   - Trigger: weekly (`cron`) and manual (`workflow_dispatch`).
   - Syncs `main` to `upstream/dev` via fast-forward.
   - Creates/updates PR `main -> dev-lumiere` with label `cinny-base-sync`.
-- `.github/workflows/deploy-lumiere.yml`
-  - Trigger: push to `dev-lumiere` or `main-lumiere`.
-  - Builds and deploys Docker image to Raspberry through VPS jump host.
 - `.github/workflows/release-lumiere.yml`
   - Trigger: push to `main-lumiere` and manual dispatch.
   - Calculates fork release version, updates `src/app/branding/version.ts`, creates `lumiere-v*` tag and GitHub Release.
+  - Deploys released build to GitHub Pages (production site).
 
 ### Versioning model
 - `CINNY_VERSION` and `LUMIERE_VERSION` are stored in:
@@ -52,10 +50,9 @@ This repository uses a fork-specific branching and release model to keep Cinny b
 
 ### Daily workflow
 1. Implement features in `dev-lumiere`.
-2. Push and validate on `https://dev-lumiere.mktk.cc`.
-3. Merge weekly base sync PR (`main -> dev-lumiere`) when available.
-4. Open PR `dev-lumiere -> main-lumiere` for release-ready changes.
-5. Merge into `main-lumiere` to deploy production and publish fork release.
+2. Merge weekly base sync PR (`main -> dev-lumiere`) when available.
+3. Open PR `dev-lumiere -> main-lumiere` for release-ready changes.
+4. Merge into `main-lumiere` to publish fork release and deploy production.
 
 ### Upstream base update workflow
 1. Weekly workflow fetches `upstream/dev`.
@@ -69,24 +66,24 @@ This repository uses a fork-specific branching and release model to keep Cinny b
 - Do not rebase/force-push `main-lumiere` after releases.
 - Keep release commit messages conventional if they should influence version bump.
 - Use PR merges into `main-lumiere` for predictable release history.
+- Keep GitHub Pages as the only production deployment target.
 
 ### Optional local release check
 - You can run the release calculator locally:
   - `npm run release:lumiere`
 - This command updates `src/app/branding/version.ts` in the working tree, so run it only when you intentionally want to validate release computation behavior.
 
-### About legacy upstream release workflow
-- `prod-deploy.yml` and `semantic-release` config are inherited from Cinny.
-- Lumiere release flow is `release-lumiere.yml` + `lumiere-v*` tags.
-- Treat inherited upstream release pipeline as non-authoritative for Lumiere fork releases.
-- `prod-deploy.yml` is now guarded as a legacy manual path and requires explicit confirmation input.
+### Production hosting model
+- Lumiere production is served by GitHub Pages at `lumiere.mktk.cc`.
+- The repository Pages source must be set to `GitHub Actions`.
+- `dev-lumiere.mktk.cc` is intentionally decommissioned.
 
 ## Self-hosting
 To host Lumiere on your own, build from source and serve `dist/` with your preferred web server.
 
 * The default homeservers and explore pages are defined in [`config.json`](config.json).
 
-* You need to set up redirects to serve the assests. Example configurations; [netlify](netlify.toml), [nginx](contrib/nginx/cinny.domain.tld.conf), [caddy](contrib/caddy/caddyfile).
+* You need to set up redirects to serve the assests. Example configurations; [nginx](contrib/nginx/cinny.domain.tld.conf), [caddy](contrib/caddy/caddyfile).
     * If you have trouble configuring redirects you can [enable hash routing](config.json#L35) — the url in the browser will have a `/#/` between the domain and open channel.
 
 * To deploy on subdirectory, you need to rebuild the app youself after updating the `base` path in [`build.config.ts`](build.config.ts).

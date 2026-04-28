@@ -3,7 +3,7 @@ name: Sync Cinny Base
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 2 * * 1"
+    - cron: '0 2 * * 1'
 
 permissions:
   contents: write
@@ -29,7 +29,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Fetch upstream and origin branches
+      - name: Fetch upstream and origin
         run: |
           set -euo pipefail
           if ! git remote get-url upstream >/dev/null 2>&1; then
@@ -40,32 +40,24 @@ jobs:
           git fetch origin main dev-lumiere
 
       - name: Fast-forward main to upstream/dev
-        id: ff
         run: |
           set -euo pipefail
 
           MAIN_SHA="$(git rev-parse origin/main)"
           UPSTREAM_SHA="$(git rev-parse upstream/dev)"
 
-          echo "main_sha=$MAIN_SHA" >> "$GITHUB_OUTPUT"
-          echo "upstream_sha=$UPSTREAM_SHA" >> "$GITHUB_OUTPUT"
-
-          if [ "$MAIN_SHA" = "$UPSTREAM_SHA" ]; then
-            echo "updated=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ "$MAIN_SHA" != "$UPSTREAM_SHA" ]; then
+            git checkout main
+            git merge --ff-only upstream/dev
+            git push origin main
           fi
-
-          git checkout main
-          git merge --ff-only upstream/dev
-          git push origin main
-          echo "updated=true" >> "$GITHUB_OUTPUT"
 
       - name: Ensure sync label exists
         run: |
           set -euo pipefail
           gh label create cinny-base-sync --color 1f6feb --description "Automated Cinny base sync PR" || true
 
-      - name: Create or update PR main -> dev-lumiere
+      - name: Create or update sync PR
         run: |
           set -euo pipefail
 
@@ -79,21 +71,17 @@ jobs:
           EXISTING="$(gh pr list --base dev-lumiere --head main --state open --json number --jq '.[0].number')"
           TITLE="chore(sync): update Cinny base from upstream/dev"
           BODY_FILE="$(mktemp)"
-          cat >"$BODY_FILE" <<'EOF'
-This PR was created automatically by the **Sync Cinny Base** workflow.
 
-- Base mirror branch `main` was fast-forwarded to `upstream/dev`.
-- Please merge this PR into `dev-lumiere` after conflict resolution and checks.
-- Keep `main-lumiere` release-only; upstream base changes should flow through `dev-lumiere`.
-EOF
+          printf '%s\n' \
+            'This PR was created automatically by the **Sync Cinny Base** workflow.' \
+            '' \
+            '- Base mirror branch `main` was fast-forwarded to `upstream/dev`.' \
+            '- Please merge this PR into `dev-lumiere` after conflict resolution and checks.' \
+            '- Keep `main-lumiere` release-only; upstream base changes should flow through `dev-lumiere`.' \
+            > "$BODY_FILE"
 
           if [ -n "$EXISTING" ]; then
             gh pr edit "$EXISTING" --title "$TITLE" --body-file "$BODY_FILE" --add-label cinny-base-sync
           else
-            gh pr create \
-              --base dev-lumiere \
-              --head main \
-              --title "$TITLE" \
-              --body-file "$BODY_FILE" \
-              --label cinny-base-sync
+            gh pr create --base dev-lumiere --head main --title "$TITLE" --body-file "$BODY_FILE" --label cinny-base-sync
           fi

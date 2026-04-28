@@ -1,6 +1,6 @@
 # Lumiere Fork Operations Guide
 
-This file is the authoritative operational guide for branch management, base sync, and releases in the Lumiere fork.
+This file is the authoritative operational guide for branch management, base sync, release versioning, and production deployment in the Lumiere fork.
 
 ## 1. Branch topology
 - `upstream/dev`
@@ -9,11 +9,11 @@ This file is the authoritative operational guide for branch management, base syn
   - Fast-forward mirror of `upstream/dev`.
   - No Lumiere product changes should be authored directly here.
 - `dev-lumiere`
-  - Integration branch for all Lumiere development.
-  - Staging environment branch (`dev-lumiere.mktk.cc`).
+  - Integration branch for Lumiere development.
+  - No public deployment target.
 - `main-lumiere`
-  - Production/release branch (`lumiere.mktk.cc`).
-  - Release tags `lumiere-v*` are created from this branch.
+  - Production release branch.
+  - GitHub Pages deployments are published from released commits on this branch.
 
 ## 2. Required invariants
 - `main` should track `upstream/dev` as close as possible.
@@ -24,6 +24,7 @@ This file is the authoritative operational guide for branch management, base syn
   - commits not reachable from `main`.
 - Release tag namespace must stay isolated from Cinny:
   - `lumiere-vX.Y.Z`.
+- Production hosting must remain GitHub Pages only.
 
 ## 3. Automation map
 
@@ -43,24 +44,14 @@ Expected outcome:
 - If no upstream changes: no branch movement.
 - If upstream changed: `main` updated and sync PR created/updated.
 
-### 3.2 Deploy automation
-Workflow: `.github/workflows/deploy-lumiere.yml`
-
-Purpose:
-- Build and push branch image to GHCR.
-- Deploy selected service on Raspberry via VPS SSH jump.
-
-Branch/domain mapping:
-- `dev-lumiere` -> `dev-lumiere.mktk.cc`
-- `main-lumiere` -> `lumiere.mktk.cc`
-
-### 3.3 Release automation
+### 3.2 Release + production deploy automation
 Workflow: `.github/workflows/release-lumiere.yml`
 
 Purpose:
 - On `main-lumiere`, calculate next Lumiere version from fork-only commits.
 - Update `src/app/branding/version.ts`.
 - Commit release bump, create `lumiere-v*` tag, publish GitHub release.
+- Build static app and deploy to GitHub Pages (`lumiere.mktk.cc`).
 
 Release script:
 - `scripts/release-lumiere.mjs`
@@ -79,8 +70,8 @@ Version calculation rules:
 
 ### 4.1 Feature development
 1. Branch/work on `dev-lumiere`.
-2. Validate in dev deployment.
-3. Keep commit messages conventional for predictable release bumps.
+2. Keep commit messages conventional for predictable release bumps.
+3. Periodically merge base-sync PRs into `dev-lumiere`.
 
 ### 4.2 Cinny base update handling
 1. Wait for weekly sync PR or run manual sync workflow.
@@ -95,7 +86,8 @@ Version calculation rules:
 4. Confirm:
   - new `lumiere-v*` tag exists
   - GitHub Release exists
-  - deployment workflow completed
+  - Pages deployment is successful
+  - `https://lumiere.mktk.cc` serves updated build
 
 ## 5. Version fields and ownership
 - File: `src/app/branding/version.ts`
@@ -108,20 +100,20 @@ Notes:
 - `package.json.version` is inherited from base and is not the Lumiere release source of truth.
 - Lumiere release identity is defined by `LUMIERE_VERSION` + `lumiere-v*` tags.
 
-## 6. Recovery and troubleshooting
+## 6. Repository and platform settings
+- Default branch must be `main-lumiere`.
+- GitHub Pages must be enabled with source `GitHub Actions`.
+- Pages custom domain must be `lumiere.mktk.cc` with HTTPS enforced.
+- `dev-lumiere.mktk.cc` must stay decommissioned.
+
+## 7. Recovery and troubleshooting
 - Sync PR missing:
   - run `Sync Cinny Base` manually from Actions tab.
 - No release created on `main-lumiere` push:
   - check if releasable commit types exist since previous `lumiere-v*`.
 - Wrong bump level:
   - verify commit headers/footers follow conventional commits.
+- Pages deployment failed:
+  - check build logs in `Release Lumiere` workflow and verify Pages settings.
 - Unexpected base drift:
-  - verify `main` still tracks `upstream/dev` and sync workflow has successful runs.
-
-## 7. Non-authoritative legacy pipeline
-- Upstream-origin release assets (`prod-deploy.yml`, `semantic-release` config) remain in repository history.
-- Lumiere production release process must follow:
-  - `release-lumiere.yml`
-  - `lumiere-v*` tags
-  - `src/app/branding/version.ts`
-- `prod-deploy.yml` is marked legacy and requires explicit manual confirmation input.
+  - verify `main` tracks `upstream/dev` and sync workflow has successful runs.
