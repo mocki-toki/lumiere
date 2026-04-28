@@ -1,4 +1,4 @@
-import React, { MouseEventHandler, forwardRef, useMemo, useRef, useState } from 'react';
+import React, { MouseEventHandler, forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Avatar,
@@ -13,6 +13,8 @@ import {
   MenuItem,
   PopOut,
   RectCords,
+  Scroll,
+  Spinner,
   Text,
   color,
   config,
@@ -76,7 +78,9 @@ import { JoinAddressPrompt } from '../../../components/join-address-prompt';
 import { _RoomSearchParams } from '../../paths';
 import {
   useAlternativeSidebarSetting,
+  useChangelogDismissedForVersionSetting,
   useCompactChatsSetting,
+  useNeverShowChangelogSetting,
   useRoundAvatarsSetting,
   useShowLastMessageSetting,
 } from '../../../features/settings/lumiere-settings/store';
@@ -98,6 +102,7 @@ import {
   useUnverifiedDeviceCount,
   VerificationStatus,
 } from '../../../hooks/useDeviceVerificationStatus';
+import { LUMIERE_VERSION } from '../../../branding/version';
 
 type HomeMenuProps = {
   alternativeSidebar: boolean;
@@ -455,6 +460,7 @@ function HomeUnverifiedItem({
   const unverifiedLabel = unverified ? 'Unverified Device' : 'Unverified Devices';
   const unverifiedColor = unverified ? color.Critical.Main : color.Warning.Main;
   const unverifiedSubtitleColor = unverified ? color.Critical.Main : color.Warning.Main;
+  const unverifiedSelectedBackground = unverified ? color.Critical.OnMain : color.Warning.OnMain;
   const unverifiedSubtitle = unverified
     ? 'Encrypted messages may be unavailable'
     : 'Action is required to verify devices';
@@ -479,8 +485,12 @@ function HomeUnverifiedItem({
       <NavItem
         variant="Background"
         radii="400"
-        aria-selected={settings}
-        style={{ margin: 0, marginBottom: config.space.S100 }}
+        aria-selected
+        style={{
+          margin: 0,
+          marginBottom: config.space.S100,
+          backgroundColor: unverifiedSelectedBackground,
+        }}
       >
         <NavButton onClick={() => setSettings(true)}>
           <NavItemContent
@@ -532,6 +542,252 @@ function HomeUnverifiedItem({
       {settings && (
         <Modal500 requestClose={() => setSettings(false)}>
           <Settings initialPage={SettingsPages.DevicesPage} requestClose={() => setSettings(false)} />
+        </Modal500>
+      )}
+    </>
+  );
+}
+
+function HomeChangelogItem({
+  compactChats,
+  roundAvatars,
+  showLastMessage,
+}: {
+  compactChats: boolean;
+  roundAvatars: boolean;
+  showLastMessage: boolean;
+}) {
+  type ChangelogRelease = {
+    id: number;
+    name: string | null;
+    tag_name: string;
+    published_at: string | null;
+    body: string | null;
+    html_url: string;
+  };
+  const screenSize = useScreenSizeContext();
+  const mobile = screenSize === ScreenSize.Mobile;
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
+  const [releases, setReleases] = useState<ChangelogRelease[]>([]);
+  const [neverShowChangelog] = useNeverShowChangelogSetting();
+  const [changelogDismissedForVersion, setChangelogDismissedForVersion] =
+    useChangelogDismissedForVersionSetting();
+  const horizontalPadding =
+    screenSize === ScreenSize.Desktop ? config.space.S300 : config.space.S100;
+  let avatarSize: '200' | '300' | '400';
+  if (mobile) {
+    avatarSize = compactChats ? '300' : '400';
+  } else {
+    avatarSize = compactChats ? '200' : '300';
+  }
+  let avatarSizePx = 50;
+  if (avatarSize === '200') avatarSizePx = 28;
+  else if (avatarSize === '300') avatarSizePx = 43;
+  const changelogAvatarStyle = {
+    width: toRem(avatarSizePx),
+    height: toRem(avatarSizePx),
+  };
+  const changelogColor = color.Success.Main;
+  const changelogSelectedBackground = color.Success.OnMain;
+  const shouldShowChangelogCard =
+    !neverShowChangelog && changelogDismissedForVersion !== LUMIERE_VERSION;
+  useEffect(() => {
+    if (!open) return undefined;
+    let disposed = false;
+    const load = async () => {
+      setLoading(true);
+      setError(undefined);
+      try {
+        const res = await fetch('https://api.github.com/repos/mocki-toki/lumiere/releases?per_page=20');
+        if (!res.ok) throw new Error(`Failed to load releases (${res.status})`);
+        const data = (await res.json()) as unknown;
+        if (!Array.isArray(data)) throw new Error('Invalid releases response');
+        const mapped = data
+          .map((item) => item as Partial<ChangelogRelease>)
+          .filter(
+            (item): item is ChangelogRelease =>
+              typeof item.id === 'number' && typeof item.tag_name === 'string'
+          )
+          .map((item) => ({
+            id: item.id,
+            name: item.name ?? null,
+            tag_name: item.tag_name,
+            published_at: item.published_at ?? null,
+            body: item.body ?? null,
+            html_url:
+              item.html_url ?? `https://github.com/mocki-toki/lumiere/releases/tag/${item.tag_name}`,
+          }));
+        if (!disposed) setReleases(mapped);
+      } catch (e) {
+        if (!disposed) setError(e instanceof Error ? e.message : 'Failed to load changelog');
+      } finally {
+        if (!disposed) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      disposed = true;
+    };
+  }, [open]);
+
+  if (!shouldShowChangelogCard && !open) return null;
+
+  return (
+    <>
+      {shouldShowChangelogCard && (
+        <NavItem
+          variant="Background"
+          radii="400"
+          aria-selected
+          style={{
+            margin: 0,
+            marginBottom: config.space.S100,
+            backgroundColor: changelogSelectedBackground,
+          }}
+        >
+          <NavButton onClick={() => setOpen(true)}>
+            <NavItemContent
+              style={{
+                paddingLeft: horizontalPadding,
+                paddingTop: compactChats ? config.space.S100 : config.space.S200,
+                paddingBottom: compactChats ? config.space.S100 : config.space.S200,
+              }}
+            >
+              <Box as="span" grow="Yes" alignItems="Center" gap="300">
+                <Avatar
+                  size={avatarSize}
+                  radii={roundAvatars ? 'Pill' : '400'}
+                  style={changelogAvatarStyle}
+                >
+                  <Icon src={Icons.Info} style={{ color: changelogColor }} />
+                </Avatar>
+                <Box as="span" grow="Yes" direction="Column" gap="50">
+                  <Text
+                    as="span"
+                    size={compactChats ? 'Inherit' : 'T400'}
+                    style={{ fontWeight: 500, color: changelogColor }}
+                    truncate
+                  >
+                    Changelog
+                  </Text>
+                  {showLastMessage && (
+                    <Text
+                      as="span"
+                      size={compactChats ? 'T200' : 'T300'}
+                      style={{ color: changelogColor, opacity: 0.8 }}
+                      truncate
+                    >
+                      See what&apos;s new
+                    </Text>
+                  )}
+                </Box>
+              </Box>
+            </NavItemContent>
+          </NavButton>
+        </NavItem>
+      )}
+      {open && (
+        <Modal500
+          requestClose={() => {
+            setOpen(false);
+            setChangelogDismissedForVersion(LUMIERE_VERSION);
+          }}
+        >
+          <Box direction="Column" style={{ height: '90vh' }}>
+            <Box
+              shrink="No"
+              alignItems="Center"
+              gap="200"
+              style={{
+                padding: `${config.space.S200} ${config.space.S300}`,
+                borderBottom: `${config.borderWidth.B300} solid ${color.Surface.ContainerLine}`,
+              }}
+            >
+              <Box grow="Yes">
+                <Text as="span" size="H4" truncate>
+                  Changelog
+                </Text>
+              </Box>
+              <IconButton onClick={() => setOpen(false)} variant="Background">
+                <Icon src={Icons.Cross} />
+              </IconButton>
+            </Box>
+            <Scroll hideTrack visibility="Hover">
+              <Box direction="Column" gap="300" style={{ padding: config.space.S300 }}>
+                {loading && (
+                  <Box
+                    alignItems="Center"
+                    justifyContent="Center"
+                    gap="200"
+                    style={{ color: color.Success.Main, minHeight: '50vh' }}
+                  >
+                    <Spinner size="200" variant="Success" />
+                    <Text size="T300">Loading releases...</Text>
+                  </Box>
+                )}
+                {!loading && error && (
+                  <Box direction="Column" gap="200">
+                    <Text size="L400" style={{ color: color.Critical.Main }}>
+                      Failed to load changelog
+                    </Text>
+                    <Text size="T300" priority="300">
+                      {error}
+                    </Text>
+                  </Box>
+                )}
+                {!loading && !error && releases.length === 0 && (
+                  <Text size="T300" priority="300">
+                    No releases found.
+                  </Text>
+                )}
+                {!loading &&
+                  !error &&
+                  releases.map((release) => (
+                    <Box
+                      key={release.id}
+                      direction="Column"
+                      gap="200"
+                      style={{
+                        padding: config.space.S300,
+                        borderRadius: config.radii.R400,
+                        border: `${config.borderWidth.B300} solid ${color.Surface.ContainerLine}`,
+                      }}
+                    >
+                      <Box alignItems="Center" gap="200" wrap="Wrap">
+                        <Text size="L400" style={{ fontWeight: 600 }}>
+                          {release.name || release.tag_name}
+                        </Text>
+                        {release.published_at && (
+                          <Text size="T200" priority="300">
+                            {new Date(release.published_at).toLocaleDateString()}
+                          </Text>
+                        )}
+                      </Box>
+                      <Text size="T300" style={{ whiteSpace: 'pre-wrap' }}>
+                        {release.body?.trim() || 'No details provided.'}
+                      </Text>
+                      <Box>
+                        <Button
+                          as="a"
+                          href={release.html_url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          size="300"
+                          variant="Secondary"
+                          fill="Soft"
+                          radii="300"
+                          before={<Icon src={Icons.Link} size="100" />}
+                        >
+                          <Text size="B300">Open on GitHub</Text>
+                        </Button>
+                      </Box>
+                    </Box>
+                  ))}
+              </Box>
+            </Scroll>
+          </Box>
         </Modal500>
       )}
     </>
@@ -686,11 +942,18 @@ export function Home() {
               )}
               <NavCategory>
                 {alternativeSidebar && (
-                  <HomeUnverifiedItem
-                    compactChats={compactChats}
-                    roundAvatars={roundAvatars}
-                    showLastMessage={showLastMessage}
-                  />
+                  <>
+                    <HomeUnverifiedItem
+                      compactChats={compactChats}
+                      roundAvatars={roundAvatars}
+                      showLastMessage={showLastMessage}
+                    />
+                    <HomeChangelogItem
+                      compactChats={compactChats}
+                      roundAvatars={roundAvatars}
+                      showLastMessage={showLastMessage}
+                    />
+                  </>
                 )}
                 {!alternativeSidebar && (
                   <NavCategoryHeader>
