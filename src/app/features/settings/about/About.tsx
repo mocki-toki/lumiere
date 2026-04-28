@@ -7,6 +7,7 @@ import { SettingTile } from '../../../components/setting-tile';
 import CinnySVG from '../../../../../public/res/svg/cinny.svg';
 import { clearCacheAndReload } from '../../../../client/initMatrix';
 import { useMatrixClient } from '../../../hooks/useMatrixClient';
+import { CINNY_VERSION, LUMIERE_VERSION } from '../../../branding/version';
 
 type AboutProps = {
   requestClose: () => void;
@@ -46,9 +47,24 @@ export function About({ requestClose }: AboutProps) {
                   <Box direction="Column" gap="100">
                     <Box gap="100" alignItems="End">
                       <Text size="H3">Lumiere</Text>
-                      <Text size="T200">v4.11.1</Text>
+                      <Text
+                        as="a"
+                        size="T200"
+                        href="https://github.com/mocki-toki/lumiere"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        {`v${LUMIERE_VERSION}`}
+                      </Text>
                     </Box>
-                    <Text>Yet another matrix client.</Text>
+                    <Text
+                      as="a"
+                      href="https://github.com/cinnyapp/cinny"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      {`Based on Cinny ${CINNY_VERSION}`}
+                    </Text>
                   </Box>
 
                   <Box gap="200" wrap="Wrap">

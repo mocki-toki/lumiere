@@ -1,7 +1,7 @@
 {
   "name": "lumiere",
   "version": "4.11.1",
-  "description": "Yet another matrix client",
+  "description": "A Cinny fork with Lumiere improvements",
   "main": "index.js",
   "type": "module",
   "engines": {

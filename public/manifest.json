@@ -1,7 +1,7 @@
 {
   "name": "Lumiere",
   "short_name": "Lumiere",
-  "description": "Yet another matrix client",
+  "description": "A Cinny fork with Lumiere improvements",
   "dir": "auto",
   "lang": "en-US",
   "display": "standalone",
