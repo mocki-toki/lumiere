@@ -2,6 +2,7 @@ import React, { MouseEventHandler, forwardRef, useMemo, useRef, useState } from 
 import { useNavigate } from 'react-router-dom';
 import {
   Avatar,
+  Badge,
   Box,
   Button,
   Icon,
@@ -13,6 +14,7 @@ import {
   PopOut,
   RectCords,
   Text,
+  color,
   config,
   toRem,
 } from 'folds';
@@ -85,9 +87,16 @@ import { useUserProfile } from '../../../hooks/useUserProfile';
 import { nameInitials } from '../../../utils/common';
 import { UserAvatar } from '../../../components/user-avatar';
 import { Modal500 } from '../../../components/Modal500';
-import { Settings } from '../../../features/settings';
+import { Settings, SettingsPages } from '../../../features/settings';
 import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
 import LogoSVG from '../../../../../public/res/svg/cinny.svg';
+import { useCrossSigningActive } from '../../../hooks/useCrossSigning';
+import { useDeviceIds, useDeviceList, useSplitCurrentDevice } from '../../../hooks/useDeviceList';
+import {
+  useDeviceVerificationStatus,
+  useUnverifiedDeviceCount,
+  VerificationStatus,
+} from '../../../hooks/useDeviceVerificationStatus';
 
 type HomeMenuProps = {
   alternativeSidebar: boolean;
@@ -253,14 +262,13 @@ function HomeHeader({
   onSearchClick: () => void;
 }) {
   const screenSize = useScreenSizeContext();
-  const logoSideMargin =
-    screenSize === ScreenSize.Mobile
-      ? '9px'
-      : screenSize === ScreenSize.Tablet
-        ? '7px'
-        : '5.5px';
-  const compactLogoSideMargin =
-    screenSize === ScreenSize.Mobile ? '6px' : screenSize === ScreenSize.Tablet ? '5px' : '0px';
+  let logoSideMargin = '5.5px';
+  if (screenSize === ScreenSize.Mobile) logoSideMargin = '9px';
+  else if (screenSize === ScreenSize.Tablet) logoSideMargin = '7px';
+
+  let compactLogoSideMargin = '0px';
+  if (screenSize === ScreenSize.Mobile) compactLogoSideMargin = '6px';
+  else if (screenSize === ScreenSize.Tablet) compactLogoSideMargin = '5px';
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
   const [settings, setSettings] = useState(false);
 
@@ -380,6 +388,79 @@ function HomeEmpty() {
   );
 }
 
+function HomeUnverifiedItem({ compactChats, roundAvatars }: { compactChats: boolean; roundAvatars: boolean }) {
+  const crossSigningActive = useCrossSigningActive();
+  const mx = useMatrixClient();
+  const crypto = mx.getCrypto();
+  const [devices] = useDeviceList();
+  const [currentDevice, otherDevices] = useSplitCurrentDevice(devices);
+  const verificationStatus = useDeviceVerificationStatus(
+    crypto,
+    mx.getSafeUserId(),
+    currentDevice?.device_id
+  );
+  const unverified = verificationStatus === VerificationStatus.Unverified;
+  const otherDevicesId = useDeviceIds(otherDevices);
+  const unverifiedDeviceCount = useUnverifiedDeviceCount(crypto, mx.getSafeUserId(), otherDevicesId);
+  const [settings, setSettings] = useState(false);
+
+  if (!crossSigningActive) return null;
+  const hasUnverified = unverified || (unverifiedDeviceCount !== undefined && unverifiedDeviceCount > 0);
+  if (!hasUnverified) return null;
+  const unverifiedLabel = unverified ? 'Unverified Device' : 'Unverified Devices';
+  const unverifiedColor = unverified ? color.Critical.Main : color.Warning.Main;
+
+  return (
+    <>
+      <NavCategory>
+        <NavItem variant="Background" radii="400" aria-selected={settings}>
+          <NavButton onClick={() => setSettings(true)}>
+            <NavItemContent
+              style={{
+                paddingLeft: config.space.S100,
+                ...(compactChats
+                  ? undefined
+                  : {
+                      paddingTop: config.space.S100,
+                      paddingBottom: config.space.S100,
+                    }),
+              }}
+            >
+              <Box as="span" grow="Yes" alignItems="Center" gap="300">
+                <Avatar size={compactChats ? '200' : '300'} radii={roundAvatars ? 'Pill' : '400'}>
+                  <Icon style={{ color: unverifiedColor }} src={Icons.ShieldUser} />
+                </Avatar>
+                <Box as="span" grow="Yes">
+                  <Text
+                    as="span"
+                    size={compactChats ? 'Inherit' : 'T400'}
+                    style={{ fontWeight: 500, color: unverifiedColor }}
+                    truncate
+                  >
+                    {unverifiedLabel}
+                  </Text>
+                </Box>
+                {!unverified && unverifiedDeviceCount && unverifiedDeviceCount > 0 && (
+                  <Badge variant="Warning" size="400" fill="Solid" radii="Pill" outlined={false}>
+                    <Text as="span" size="L400">
+                      {unverifiedDeviceCount}
+                    </Text>
+                  </Badge>
+                )}
+              </Box>
+            </NavItemContent>
+          </NavButton>
+        </NavItem>
+      </NavCategory>
+      {settings && (
+        <Modal500 requestClose={() => setSettings(false)}>
+          <Settings initialPage={SettingsPages.DevicesPage} requestClose={() => setSettings(false)} />
+        </Modal500>
+      )}
+    </>
+  );
+}
+
 const HOME_CATEGORY_ID = makeNavCategoryId('home', 'room');
 export function Home() {
   const mx = useMatrixClient();
@@ -468,6 +549,9 @@ export function Home() {
         ) : (
           <PageNavContent scrollRef={scrollRef}>
             <Box direction="Column" gap="300">
+              {alternativeSidebar && (
+                <HomeUnverifiedItem compactChats={compactChats} roundAvatars={roundAvatars} />
+              )}
               {!alternativeSidebar && (
                 <NavCategory>
                   <NavItem variant="Background" radii="400" aria-selected={createRoomSelected}>
