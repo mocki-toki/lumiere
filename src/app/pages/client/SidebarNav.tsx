@@ -18,9 +18,20 @@ import {
   SearchTab,
 } from './sidebar';
 import { CreateTab } from './sidebar/CreateTab';
+import { useAlternativeSidebarSetting } from '../../features/settings/lumiere-settings/store';
+import { useHomeSelected } from '../../hooks/router/useHomeSelected';
 
-export function SidebarNav() {
+type SidebarNavProps = {
+  embedded?: boolean;
+};
+
+export function SidebarNav({ embedded }: SidebarNavProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [alternativeSidebar] = useAlternativeSidebarSetting();
+  const homeSelected = useHomeSelected();
+  const shouldHideInLayout = alternativeSidebar && homeSelected && !embedded;
+
+  if (shouldHideInLayout) return null;
 
   return (
     <Sidebar>
@@ -29,13 +40,13 @@ export function SidebarNav() {
           <Scroll ref={scrollRef} variant="Background" size="0">
             <SidebarStack>
               <HomeTab />
-              <DirectTab />
+              {!alternativeSidebar && <DirectTab />}
             </SidebarStack>
             <SpaceTabs scrollRef={scrollRef} />
             <SidebarStackSeparator />
             <SidebarStack>
               <ExploreTab />
-              <CreateTab />
+              {!alternativeSidebar && <CreateTab />}
             </SidebarStack>
           </Scroll>
         }

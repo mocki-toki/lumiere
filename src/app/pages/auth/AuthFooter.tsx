@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'folds';
 import * as css from './styles.css';
+import { APP_VERSION_LABEL } from '../../branding/version';
 
 export function AuthFooter() {
   return (
@@ -21,7 +22,7 @@ export function AuthFooter() {
         target="_blank"
         rel="noreferrer"
       >
-        v4.11.1
+        {APP_VERSION_LABEL}
       </Text>
       <Text
         as="a"

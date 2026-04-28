@@ -101,6 +101,11 @@ type SpaceMenuProps = {
 };
 const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(
   ({ room, requestClose, onUnpin }, ref) => {
+    const screenSize = useScreenSizeContext();
+    const touchMenu = screenSize === ScreenSize.Mobile || screenSize === ScreenSize.Tablet;
+    const menuIconSize = touchMenu ? '200' : '100';
+    const menuIconWrapStyle = touchMenu ? { marginLeft: config.space.S200 } : undefined;
+    const menuMaxWidth = touchMenu ? toRem(220) : toRem(160);
     const mx = useMatrixClient();
     const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
     const roomToParents = useAtomValue(roomToParentsAtom);
@@ -147,7 +152,7 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(
     };
 
     return (
-      <Menu ref={ref} style={{ maxWidth: toRem(160), width: '100vw' }}>
+      <Menu ref={ref} style={{ maxWidth: menuMaxWidth, width: '100vw' }}>
         {invitePrompt && room && (
           <InviteUserPrompt
             room={room}
@@ -161,7 +166,11 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(
           <MenuItem
             onClick={handleMarkAsRead}
             size="300"
-            after={<Icon size="100" src={Icons.CheckTwice} />}
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.CheckTwice} />
+              </Box>
+            }
             radii="300"
             disabled={!unread}
           >
@@ -174,7 +183,11 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(
               size="300"
               radii="300"
               onClick={handleUnpin}
-              after={<Icon size="100" src={Icons.Pin} />}
+              after={
+                <Box style={menuIconWrapStyle}>
+                  <Icon size={menuIconSize} src={Icons.Pin} />
+                </Box>
+              }
             >
               <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
                 Unpin
@@ -189,7 +202,11 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(
             variant="Primary"
             fill="None"
             size="300"
-            after={<Icon size="100" src={Icons.UserPlus} />}
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.UserPlus} />
+              </Box>
+            }
             radii="300"
             aria-pressed={invitePrompt}
             disabled={!canInvite}
@@ -201,7 +218,11 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(
           <MenuItem
             onClick={handleCopyLink}
             size="300"
-            after={<Icon size="100" src={Icons.Link} />}
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.Link} />
+              </Box>
+            }
             radii="300"
           >
             <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -211,7 +232,11 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(
           <MenuItem
             onClick={handleRoomSettings}
             size="300"
-            after={<Icon size="100" src={Icons.Setting} />}
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.Setting} />
+              </Box>
+            }
             radii="300"
           >
             <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>

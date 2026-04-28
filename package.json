@@ -1,7 +1,7 @@
 {
   "name": "lumiere",
   "version": "4.11.1",
-  "description": "Yet another matrix client",
+  "description": "A Cinny fork with Lumiere improvements",
   "main": "index.js",
   "type": "module",
   "engines": {
@@ -18,7 +18,8 @@
     "typecheck": "tsc --noEmit",
     "prepare": "husky install",
     "commit": "git-cz",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "release:lumiere": "node scripts/release-lumiere.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": "eslint",

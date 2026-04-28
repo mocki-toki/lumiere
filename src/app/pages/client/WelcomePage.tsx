@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Button, Icon, Icons, Text, config, toRem } from 'folds';
 import { Page, PageHero, PageHeroSection } from '../../components/page';
 import CinnySVG from '../../../../public/res/svg/cinny.svg';
+import { CINNY_VERSION, LUMIERE_VERSION } from '../../branding/version';
 
 export function WelcomePage() {
   return (
@@ -15,16 +16,31 @@ export function WelcomePage() {
         <PageHeroSection>
           <PageHero
             icon={<img width="70" height="70" src={CinnySVG} alt="Lumiere Logo" />}
-            title="Welcome to Lumiere"
-            subTitle={
-              <span>
-                Yet another matrix client.{' '}
-                <a
-                  href="https://github.com/mocki-toki/lumiere/releases"
+            title={
+              <Box as="span" alignItems="End" gap="100">
+                <Text as="span" size="H2">
+                  Welcome to Lumiere
+                </Text>
+                <Text
+                  as="a"
+                  size="T200"
+                  href="https://github.com/mocki-toki/lumiere"
                   target="_blank"
                   rel="noreferrer noopener"
                 >
-                  v4.11.1
+                  {`v${LUMIERE_VERSION}`}
+                </Text>
+              </Box>
+            }
+            subTitle={
+              <span>
+                A Cinny fork with improvements.{' '}
+                <a
+                  href="https://github.com/cinnyapp/cinny"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {`Based on Cinny ${CINNY_VERSION}`}
                 </a>
               </span>
             }

@@ -74,6 +74,13 @@ type RoomMenuProps = {
   requestClose: () => void;
 };
 const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose }, ref) => {
+  const screenSize = useScreenSizeContext();
+  const touchMenu = screenSize === ScreenSize.Mobile || screenSize === ScreenSize.Tablet;
+  const menuIconSize = touchMenu ? '200' : '100';
+  const menuIconWrapStyle = touchMenu ? { marginLeft: config.space.S100 } : undefined;
+  const menuGroupGap = touchMenu ? '200' : '100';
+  const menuGroupPadding = touchMenu ? config.space.S200 : config.space.S100;
+  const menuMaxWidth = touchMenu ? toRem(200) : toRem(160);
   const mx = useMatrixClient();
   const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
   const unread = useRoomUnread(room.roomId, roomToUnreadAtom);
@@ -112,7 +119,7 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
   };
 
   return (
-    <Menu ref={ref} style={{ maxWidth: toRem(160), width: '100vw' }}>
+    <Menu ref={ref} style={{ maxWidth: menuMaxWidth, width: '100vw' }}>
       {invitePrompt && (
         <InviteUserPrompt
           room={room}
@@ -122,11 +129,15 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
           }}
         />
       )}
-      <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+      <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
         <MenuItem
           onClick={handleMarkAsRead}
           size="300"
-          after={<Icon size="100" src={Icons.CheckTwice} />}
+          after={
+            <Box style={menuIconWrapStyle}>
+              <Icon size={menuIconSize} src={Icons.CheckTwice} />
+            </Box>
+          }
           radii="300"
           disabled={!unread}
         >
@@ -142,7 +153,9 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
                 changing ? (
                   <Spinner size="100" variant="Secondary" />
                 ) : (
-                  <Icon size="100" src={getRoomNotificationModeIcon(notificationMode)} />
+                  <Box style={menuIconWrapStyle}>
+                    <Icon size={menuIconSize} src={getRoomNotificationModeIcon(notificationMode)} />
+                  </Box>
                 )
               }
               radii="300"
@@ -157,13 +170,17 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
         </RoomNotificationModeSwitcher>
       </Box>
       <Line variant="Surface" size="300" />
-      <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+      <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
         <MenuItem
           onClick={handleInvite}
           variant="Primary"
           fill="None"
           size="300"
-          after={<Icon size="100" src={Icons.UserPlus} />}
+          after={
+            <Box style={menuIconWrapStyle}>
+              <Icon size={menuIconSize} src={Icons.UserPlus} />
+            </Box>
+          }
           radii="300"
           aria-pressed={invitePrompt}
           disabled={!canInvite}
@@ -175,7 +192,11 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
         <MenuItem
           onClick={handleCopyLink}
           size="300"
-          after={<Icon size="100" src={Icons.Link} />}
+          after={
+            <Box style={menuIconWrapStyle}>
+              <Icon size={menuIconSize} src={Icons.Link} />
+            </Box>
+          }
           radii="300"
         >
           <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -185,7 +206,11 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
         <MenuItem
           onClick={handleOpenSettings}
           size="300"
-          after={<Icon size="100" src={Icons.Setting} />}
+          after={
+            <Box style={menuIconWrapStyle}>
+              <Icon size={menuIconSize} src={Icons.Setting} />
+            </Box>
+          }
           radii="300"
         >
           <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -198,7 +223,11 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
               <MenuItem
                 onClick={() => setPromptJump(true)}
                 size="300"
-                after={<Icon size="100" src={Icons.RecentClock} />}
+                after={
+                  <Box style={menuIconWrapStyle}>
+                    <Icon size={menuIconSize} src={Icons.RecentClock} />
+                  </Box>
+                }
                 radii="300"
                 aria-pressed={promptJump}
               >
@@ -221,7 +250,7 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
         </UseStateProvider>
       </Box>
       <Line variant="Surface" size="300" />
-      <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+      <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
         <UseStateProvider initial={false}>
           {(promptLeave, setPromptLeave) => (
             <>
@@ -230,7 +259,11 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
                 variant="Critical"
                 fill="None"
                 size="300"
-                after={<Icon size="100" src={Icons.ArrowGoLeft} />}
+                after={
+                  <Box style={menuIconWrapStyle}>
+                    <Icon size={menuIconSize} src={Icons.ArrowGoLeft} />
+                  </Box>
+                }
                 radii="300"
                 aria-pressed={promptLeave}
               >
@@ -391,7 +424,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
             >
               {(triggerRef) => (
                 <IconButton fill="None" ref={triggerRef} onClick={handleSearchClick}>
-                  <Icon size="400" src={Icons.Search} />
+                  <Icon size="200" src={Icons.Search} />
                 </IconButton>
               )}
             </TooltipProvider>
@@ -430,7 +463,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
                     </Text>
                   </Badge>
                 )}
-                <Icon size="400" src={Icons.Pin} filled={!!pinMenuAnchor} />
+                <Icon size="200" src={Icons.Pin} filled={!!pinMenuAnchor} />
               </IconButton>
             )}
           </TooltipProvider>
@@ -470,7 +503,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
             >
               {(triggerRef) => (
                 <IconButton fill="None" ref={triggerRef} onClick={handleMemberToggle}>
-                  <Icon size="400" src={Icons.User} />
+                  <Icon size="200" src={Icons.User} />
                 </IconButton>
               )}
             </TooltipProvider>
@@ -493,7 +526,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
                 ref={triggerRef}
                 aria-pressed={!!menuAnchor}
               >
-                <Icon size="400" src={Icons.VerticalDots} filled={!!menuAnchor} />
+                <Icon size="200" src={Icons.VerticalDots} filled={!!menuAnchor} />
               </IconButton>
             )}
           </TooltipProvider>

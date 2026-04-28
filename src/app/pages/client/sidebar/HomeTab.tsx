@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Icon, Icons, Menu, MenuItem, PopOut, RectCords, Text, config, toRem } from 'folds';
 import { useAtomValue } from 'jotai';
 import FocusTrap from 'focus-trap-react';
-import { useOrphanRooms } from '../../../state/hooks/roomList';
+import { useDirects, useOrphanRooms } from '../../../state/hooks/roomList';
 import { useMatrixClient } from '../../../hooks/useMatrixClient';
 import { mDirectAtom } from '../../../state/mDirectList';
 import { roomToParentsAtom } from '../../../state/room/roomToParents';
@@ -22,57 +22,91 @@ import { UnreadBadge } from '../../../components/unread-badge';
 import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
 import { useNavToActivePathAtom } from '../../../state/hooks/navToActivePath';
 import { useHomeRooms } from '../home/useHomeRooms';
+import { useDirectRooms } from '../direct/useDirectRooms';
 import { markAsRead } from '../../../utils/notifications';
 import { stopPropagation } from '../../../utils/keyboard';
 import { useSetting } from '../../../state/hooks/settings';
 import { settingsAtom } from '../../../state/settings';
+import { useDirectSelected } from '../../../hooks/router/useDirectSelected';
+import { useAlternativeSidebarSetting } from '../../../features/settings/lumiere-settings/store';
 
 type HomeMenuProps = {
+  includeDirect: boolean;
   requestClose: () => void;
 };
-const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(({ requestClose }, ref) => {
-  const orphanRooms = useHomeRooms();
-  const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
-  const unread = useRoomsUnread(orphanRooms, roomToUnreadAtom);
-  const mx = useMatrixClient();
+const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(
+  ({ includeDirect, requestClose }, ref) => {
+    const screenSize = useScreenSizeContext();
+    const touchMenu = screenSize === ScreenSize.Mobile || screenSize === ScreenSize.Tablet;
+    const menuIconSize = touchMenu ? '200' : '100';
+    const menuIconWrapStyle = touchMenu ? { marginLeft: config.space.S200 } : undefined;
+    const menuMaxWidth = touchMenu ? toRem(220) : toRem(160);
+    const homeRooms = useHomeRooms();
+    const directRooms = useDirectRooms();
+    const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
+    const unread = useRoomsUnread(
+      includeDirect ? [...homeRooms, ...directRooms] : homeRooms,
+      roomToUnreadAtom
+    );
+    const mx = useMatrixClient();
 
-  const handleMarkAsRead = () => {
-    if (!unread) return;
-    orphanRooms.forEach((rId) => markAsRead(mx, rId, hideActivity));
-    requestClose();
-  };
+    const handleMarkAsRead = () => {
+      if (!unread) return;
+      (includeDirect ? [...homeRooms, ...directRooms] : homeRooms).forEach((rId) =>
+        markAsRead(mx, rId, hideActivity)
+      );
+      requestClose();
+    };
 
-  return (
-    <Menu ref={ref} style={{ maxWidth: toRem(160), width: '100vw' }}>
-      <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
-        <MenuItem
-          onClick={handleMarkAsRead}
-          size="300"
-          after={<Icon size="100" src={Icons.CheckTwice} />}
-          radii="300"
-          aria-disabled={!unread}
-        >
-          <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
-            Mark as Read
-          </Text>
-        </MenuItem>
-      </Box>
-    </Menu>
-  );
-});
+    return (
+      <Menu ref={ref} style={{ maxWidth: menuMaxWidth, width: '100vw' }}>
+        <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+          <MenuItem
+            onClick={handleMarkAsRead}
+            size="300"
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.CheckTwice} />
+              </Box>
+            }
+            radii="300"
+            aria-disabled={!unread}
+          >
+            <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+              Mark as Read
+            </Text>
+          </MenuItem>
+        </Box>
+      </Menu>
+    );
+  }
+);
 
 export function HomeTab() {
   const navigate = useNavigate();
   const mx = useMatrixClient();
   const screenSize = useScreenSizeContext();
   const navToActivePath = useAtomValue(useNavToActivePathAtom());
+  const [alternativeSidebar] = useAlternativeSidebarSetting();
 
   const mDirects = useAtomValue(mDirectAtom);
   const roomToParents = useAtomValue(roomToParentsAtom);
   const orphanRooms = useOrphanRooms(mx, allRoomsAtom, mDirects, roomToParents);
+  const directs = useDirects(mx, allRoomsAtom, mDirects);
+  const directUnread = useRoomsUnread(directs, roomToUnreadAtom);
   const homeUnread = useRoomsUnread(orphanRooms, roomToUnreadAtom);
   const homeSelected = useHomeSelected();
+  const directSelected = useDirectSelected();
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
+
+  const mergedUnread = alternativeSidebar
+    ? {
+        total: (homeUnread?.total ?? 0) + (directUnread?.total ?? 0),
+        highlight: (homeUnread?.highlight ?? 0) + (directUnread?.highlight ?? 0),
+      }
+    : homeUnread;
+  const hasMergedUnread = !!mergedUnread && (mergedUnread.total > 0 || mergedUnread.highlight > 0);
+  const mergedSelected = alternativeSidebar ? homeSelected || directSelected : homeSelected;
 
   const handleHomeClick = () => {
     const activePath = navToActivePath.get('home');
@@ -94,8 +128,8 @@ export function HomeTab() {
   };
 
   return (
-    <SidebarItem active={homeSelected}>
-      <SidebarItemTooltip tooltip="Home">
+    <SidebarItem active={mergedSelected}>
+      <SidebarItemTooltip tooltip={alternativeSidebar ? 'Home & Direct Messages' : 'Home'}>
         {(triggerRef) => (
           <SidebarAvatar
             as="button"
@@ -104,13 +138,13 @@ export function HomeTab() {
             onClick={handleHomeClick}
             onContextMenu={handleContextMenu}
           >
-            <Icon src={Icons.Home} filled={homeSelected} />
+            <Icon src={Icons.Home} filled={mergedSelected} />
           </SidebarAvatar>
         )}
       </SidebarItemTooltip>
-      {homeUnread && (
-        <SidebarItemBadge hasCount={homeUnread.total > 0}>
-          <UnreadBadge highlight={homeUnread.highlight > 0} count={homeUnread.total} />
+      {hasMergedUnread && (
+        <SidebarItemBadge hasCount={mergedUnread.total > 0}>
+          <UnreadBadge highlight={mergedUnread.highlight > 0} count={mergedUnread.total} />
         </SidebarItemBadge>
       )}
       {menuAnchor && (
@@ -130,7 +164,10 @@ export function HomeTab() {
                 escapeDeactivates: stopPropagation,
               }}
             >
-              <HomeMenu requestClose={() => setMenuAnchor(undefined)} />
+              <HomeMenu
+                includeDirect={alternativeSidebar}
+                requestClose={() => setMenuAnchor(undefined)}
+              />
             </FocusTrap>
           }
         />

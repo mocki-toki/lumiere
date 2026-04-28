@@ -1,10 +1,17 @@
-name: Production deploy
+name: Production deploy (Legacy Cinny Flow)
 
 on:
   workflow_dispatch:
+    inputs:
+      confirm_legacy:
+        description: "Run legacy Cinny production deploy flow (not used for Lumiere releases)"
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   deploy-and-tarball:
+    if: ${{ inputs.confirm_legacy }}
     name: Netlify deploy and tarball
     outputs:
       version: ${{ steps.vars.outputs.tag }}

@@ -30,6 +30,11 @@ type DirectMenuProps = {
   requestClose: () => void;
 };
 const DirectMenu = forwardRef<HTMLDivElement, DirectMenuProps>(({ requestClose }, ref) => {
+  const screenSize = useScreenSizeContext();
+  const touchMenu = screenSize === ScreenSize.Mobile || screenSize === ScreenSize.Tablet;
+  const menuIconSize = touchMenu ? '200' : '100';
+  const menuIconWrapStyle = touchMenu ? { marginLeft: config.space.S200 } : undefined;
+  const menuMaxWidth = touchMenu ? toRem(220) : toRem(160);
   const orphanRooms = useDirectRooms();
   const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
   const unread = useRoomsUnread(orphanRooms, roomToUnreadAtom);
@@ -42,12 +47,16 @@ const DirectMenu = forwardRef<HTMLDivElement, DirectMenuProps>(({ requestClose }
   };
 
   return (
-    <Menu ref={ref} style={{ maxWidth: toRem(160), width: '100vw' }}>
+    <Menu ref={ref} style={{ maxWidth: menuMaxWidth, width: '100vw' }}>
       <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
         <MenuItem
           onClick={handleMarkAsRead}
           size="300"
-          after={<Icon size="100" src={Icons.CheckTwice} />}
+          after={
+            <Box style={menuIconWrapStyle}>
+              <Icon size={menuIconSize} src={Icons.CheckTwice} />
+            </Box>
+          }
           radii="300"
           aria-disabled={!unread}
         >

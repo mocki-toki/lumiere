@@ -1,0 +1,73 @@
+name: Release Lumiere
+
+on:
+  push:
+    branches:
+      - main-lumiere
+  workflow_dispatch:
+
+concurrency:
+  group: release-lumiere-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BASE_BRANCH: origin/main
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Fetch branches and tags
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main main-lumiere
+          git fetch --tags origin
+
+      - name: Compute Lumiere release
+        id: rel
+        run: node scripts/release-lumiere.mjs
+
+      - name: Stop when no releasable fork commits found
+        if: steps.rel.outputs.should_release != 'true'
+        run: |
+          echo "No releasable fork commits detected. Skipping release."
+
+      - name: Commit version update
+        if: steps.rel.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/app/branding/version.ts
+          git commit -m "chore(release): lumiere v${{ steps.rel.outputs.lumiere_version }} [skip ci]"
+
+      - name: Push release commit
+        if: steps.rel.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          git push origin HEAD:main-lumiere
+
+      - name: Create tag
+        if: steps.rel.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          git tag "${{ steps.rel.outputs.tag_name }}"
+          git push origin "${{ steps.rel.outputs.tag_name }}"
+
+      - name: Publish GitHub release
+        if: steps.rel.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          gh release create "${{ steps.rel.outputs.tag_name }}" \
+            --title "Lumiere ${{ steps.rel.outputs.lumiere_version }}" \
+            --notes-file "${{ steps.rel.outputs.release_notes_file }}"
