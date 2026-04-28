@@ -363,7 +363,7 @@ export function RoomViewHeader({ callView }: { callView?: boolean }) {
           </BackRouteHandler>
         )}
         <Box grow="Yes" alignItems="Center" gap="300">
-          {alternativeSidebar && (
+          {alternativeSidebar && screenSize === ScreenSize.Mobile && (
             <Box shrink="No" alignItems="Center">
               <IconButton fill="None" onClick={handleBackHome}>
                 <Icon src={Icons.ArrowLeft} />
