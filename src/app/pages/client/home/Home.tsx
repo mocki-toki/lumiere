@@ -87,6 +87,7 @@ import { UserAvatar } from '../../../components/user-avatar';
 import { Modal500 } from '../../../components/Modal500';
 import { Settings } from '../../../features/settings';
 import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
+import LogoSVG from '../../../../../public/res/svg/cinny.svg';
 
 type HomeMenuProps = {
   alternativeSidebar: boolean;
@@ -242,10 +243,12 @@ const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(
 
 function HomeHeader({
   alternativeSidebar,
+  compactChats,
   searchSelected,
   onSearchClick,
 }: {
   alternativeSidebar: boolean;
+  compactChats: boolean;
   searchSelected: boolean;
   onSearchClick: () => void;
 }) {
@@ -265,9 +268,23 @@ function HomeHeader({
       <PageNavHeader>
         <Box alignItems="Center" grow="Yes" gap="300">
           <Box grow="Yes">
-            <Text size="H4" truncate>
-              Home
-            </Text>
+            <Box alignItems="Center" gap="300">
+              {alternativeSidebar && (
+                <img
+                  src={LogoSVG}
+                  alt="Lumiere"
+                  style={{
+                    width: toRem(24),
+                    height: toRem(24),
+                    marginLeft: compactChats ? undefined : toRem(5.5),
+                    marginRight: compactChats ? undefined : toRem(5.5),
+                  }}
+                />
+              )}
+              <Text size="H4" truncate style={alternativeSidebar ? { fontWeight: 500 } : undefined}>
+                {alternativeSidebar ? 'Lumiere' : 'Home'}
+              </Text>
+            </Box>
           </Box>
           <Box gap="100">
             <IconButton aria-pressed={searchSelected} variant="Background" onClick={onSearchClick}>
@@ -433,6 +450,7 @@ export function Home() {
       <Box grow="Yes" direction="Column" style={{ position: 'relative' }}>
         <HomeHeader
           alternativeSidebar={alternativeSidebar}
+          compactChats={compactChats}
           searchSelected={searchSelected}
           onSearchClick={handleSearchClick}
         />
