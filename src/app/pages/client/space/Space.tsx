@@ -2,6 +2,7 @@ import React, {
   MouseEventHandler,
   forwardRef,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -12,12 +13,18 @@ import {
   Avatar,
   Box,
   Button,
+  Chip,
+  Dialog,
+  Header,
   Icon,
   IconButton,
   Icons,
   Line,
   Menu,
   MenuItem,
+  Overlay,
+  OverlayBackdrop,
+  OverlayCenter,
   PopOut,
   RectCords,
   Spinner,
@@ -35,6 +42,7 @@ import { mDirectAtom } from '../../../state/mDirectList';
 import {
   NavCategory,
   NavCategoryHeader,
+  NavButton,
   NavItem,
   NavItemContent,
   NavLink,
@@ -45,11 +53,12 @@ import {
   getSpaceRoomPath,
   getSpaceSearchPath,
 } from '../../pathUtils';
-import { getCanonicalAliasOrRoomId, isRoomAlias } from '../../../utils/matrix';
+import { getCanonicalAliasOrRoomId, isRoomAlias, mxcUrlToHttp } from '../../../utils/matrix';
 import { useSelectedRoom } from '../../../hooks/router/useSelectedRoom';
 import {
   useSpaceLobbySelected,
   useSpaceSearchSelected,
+  useSelectedSpace,
 } from '../../../hooks/router/useSelectedSpace';
 import { useSpace } from '../../../hooks/useSpace';
 import { VirtualTile } from '../../../components/virtualizer';
@@ -59,7 +68,7 @@ import { roomToUnreadAtom } from '../../../state/room/roomToUnread';
 import { useCategoryHandler } from '../../../hooks/useCategoryHandler';
 import { useNavToActivePathMapper } from '../../../hooks/useNavToActivePathMapper';
 import { useRoomName } from '../../../hooks/useRoomMeta';
-import { useSpaceJoinedHierarchy } from '../../../hooks/useSpaceHierarchy';
+import { useFetchSpaceHierarchyLevel, useSpaceJoinedHierarchy } from '../../../hooks/useSpaceHierarchy';
 import { allRoomsAtom } from '../../../state/room-list/roomList';
 import { PageNav, PageNavContent, PageNavHeader } from '../../../components/page';
 import { usePowerLevels } from '../../../hooks/usePowerLevels';
@@ -76,6 +85,10 @@ import { Membership, StateEvent } from '../../../../types/matrix/room';
 import { stopPropagation } from '../../../utils/keyboard';
 import { getMatrixToRoom } from '../../../plugins/matrix-to';
 import { getViaServers } from '../../../plugins/via-servers';
+import { getSpaceChildren } from '../../../utils/room';
+import { RoomAvatar } from '../../../components/room-avatar';
+import { nameInitials } from '../../../utils/common';
+import { useMediaAuthentication } from '../../../hooks/useMediaAuthentication';
 import { useSetting } from '../../../state/hooks/settings';
 import { settingsAtom } from '../../../state/settings';
 import {
@@ -93,7 +106,9 @@ import { InviteUserPrompt } from '../../../components/invite-user-prompt';
 import { useCallEmbed } from '../../../hooks/useCallEmbed';
 import {
   useAlternativeSidebarSetting,
+  useCompactChatsSetting,
   useRoundAvatarsSetting,
+  useShowLastMessageSetting,
 } from '../../../features/settings/lumiere-settings/store';
 import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
 
@@ -437,8 +452,102 @@ export function SpaceTombstone({ roomId, replacementRoomId }: SpaceTombstoneProp
   );
 }
 
+type JoinRoomConfirmPromptProps = {
+  roomId: string;
+  roomName: string;
+  onDone: (joinedRoomId: string) => void;
+  onCancel: () => void;
+};
+function JoinRoomConfirmPrompt({ roomId, roomName, onDone, onCancel }: JoinRoomConfirmPromptProps) {
+  const mx = useMatrixClient();
+  const [joinState, joinRoom] = useAsyncCallback<Room, unknown, []>(
+    useCallback(() => mx.joinRoom(roomId), [mx, roomId])
+  );
+
+  const handleJoin = () => {
+    joinRoom();
+  };
+
+  useEffect(() => {
+    if (joinState.status === AsyncStatus.Success) {
+      onDone(joinState.data.roomId);
+    }
+  }, [joinState, onDone]);
+
+  let joinError: string | undefined;
+  if (joinState.status === AsyncStatus.Error) {
+    joinError = joinState.error instanceof Error ? joinState.error.message : 'Failed to join room.';
+  }
+
+  return (
+    <Overlay open backdrop={<OverlayBackdrop />}>
+      <OverlayCenter>
+        <FocusTrap
+          focusTrapOptions={{
+            initialFocus: false,
+            onDeactivate: onCancel,
+            clickOutsideDeactivates: true,
+            escapeDeactivates: stopPropagation,
+          }}
+        >
+          <Dialog variant="Surface">
+            <Header
+              style={{
+                padding: `0 ${config.space.S200} 0 ${config.space.S400}`,
+                borderBottomWidth: config.borderWidth.B300,
+              }}
+              variant="Surface"
+              size="500"
+            >
+              <Box grow="Yes">
+                <Text size="H4">Join Room</Text>
+              </Box>
+              <IconButton size="300" onClick={onCancel} radii="300">
+                <Icon src={Icons.Cross} />
+              </IconButton>
+            </Header>
+            <Box style={{ padding: config.space.S400 }} direction="Column" gap="400">
+              <Box direction="Column" gap="200">
+                <Text priority="400">Join &quot;{roomName}&quot;?</Text>
+                {joinError && (
+                  <Text style={{ color: color.Critical.Main }} size="T300">
+                    {joinError}
+                  </Text>
+                )}
+              </Box>
+              <Button
+                variant="Primary"
+                onClick={handleJoin}
+                before={
+                  joinState.status === AsyncStatus.Loading ? (
+                    <Spinner fill="Solid" variant="Primary" size="200" />
+                  ) : (
+                    <Icon src={Icons.Plus} size="100" />
+                  )
+                }
+                aria-disabled={
+                  joinState.status === AsyncStatus.Loading ||
+                  joinState.status === AsyncStatus.Success
+                }
+              >
+                <Text size="B400">
+                  {joinState.status === AsyncStatus.Loading ? 'Joining...' : 'Join'}
+                </Text>
+              </Button>
+            </Box>
+          </Dialog>
+        </FocusTrap>
+      </OverlayCenter>
+    </Overlay>
+  );
+}
+
 export function Space() {
   const mx = useMatrixClient();
+  const navigate = useNavigate();
+  const useAuthentication = useMediaAuthentication();
+  const screenSize = useScreenSizeContext();
+  const mobile = screenSize === ScreenSize.Mobile;
   const space = useSpace();
   useNavToActivePathMapper(space.roomId);
   const spaceIdOrAlias = getCanonicalAliasOrRoomId(mx, space.roomId);
@@ -449,15 +558,62 @@ export function Space() {
   const allJoinedRooms = useMemo(() => new Set(allRooms), [allRooms]);
   const notificationPreferences = useRoomsNotificationPreferencesContext();
   const [roundAvatars] = useRoundAvatarsSetting();
+  const [compactChats] = useCompactChatsSetting();
+  const [showLastMessage] = useShowLastMessageSetting();
   const [alternativeSidebar] = useAlternativeSidebarSetting();
+  const alternativeHorizontalPadding =
+    screenSize === ScreenSize.Desktop ? config.space.S300 : config.space.S100;
+  let alternativeAvatarSize: '200' | '300' | '400';
+  if (mobile) {
+    alternativeAvatarSize = compactChats ? '300' : '400';
+  } else {
+    alternativeAvatarSize = compactChats ? '200' : '300';
+  }
+  let alternativeAvatarSizePx = 50;
+  if (alternativeAvatarSize === '200') alternativeAvatarSizePx = 28;
+  else if (alternativeAvatarSize === '300') alternativeAvatarSizePx = 43;
+  const alternativeAvatarStyle = {
+    width: toRem(alternativeAvatarSizePx),
+    height: toRem(alternativeAvatarSizePx),
+  };
 
   const tombstoneEvent = useStateEvent(space, StateEvent.RoomTombstone);
   const selectedRoomId = useSelectedRoom();
+  const selectedSpaceId = useSelectedSpace();
   const lobbySelected = useSpaceLobbySelected(spaceIdOrAlias);
   const searchSelected = useSpaceSearchSelected(spaceIdOrAlias);
   const callEmbed = useCallEmbed();
+  const [joinPrompt, setJoinPrompt] = useState<{ roomId: string; roomName: string }>();
 
   const [closedCategories, setClosedCategories] = useAtom(useClosedNavCategoriesAtom());
+  const getHierarchyRoomId = useCallback((room: unknown): string | undefined => {
+    if (!room || typeof room !== 'object') return undefined;
+    const candidate = (room as { room_id?: unknown; roomId?: unknown }).room_id
+      ?? (room as { room_id?: unknown; roomId?: unknown }).roomId;
+    return typeof candidate === 'string' ? candidate : undefined;
+  }, []);
+  const getHierarchyRoomName = useCallback((room: unknown): string | undefined => {
+    if (!room || typeof room !== 'object') return undefined;
+    const candidate = (room as { name?: unknown }).name;
+    return typeof candidate === 'string' ? candidate : undefined;
+  }, []);
+  const getHierarchyRoomAlias = useCallback((room: unknown): string | undefined => {
+    if (!room || typeof room !== 'object') return undefined;
+    const candidate = (room as { canonical_alias?: unknown; canonicalAlias?: unknown }).canonical_alias
+      ?? (room as { canonical_alias?: unknown; canonicalAlias?: unknown }).canonicalAlias;
+    return typeof candidate === 'string' ? candidate : undefined;
+  }, []);
+  const getHierarchyRoomMemberCount = useCallback((room: unknown): number | undefined => {
+    if (!room || typeof room !== 'object') return undefined;
+    const candidate = (room as { num_joined_members?: unknown }).num_joined_members;
+    return typeof candidate === 'number' ? candidate : undefined;
+  }, []);
+  const getHierarchyRoomAvatarUrl = useCallback((room: unknown): string | undefined => {
+    if (!room || typeof room !== 'object') return undefined;
+    const candidate = (room as { avatar_url?: unknown; avatarUrl?: unknown }).avatar_url
+      ?? (room as { avatar_url?: unknown; avatarUrl?: unknown }).avatarUrl;
+    return typeof candidate === 'string' ? candidate : undefined;
+  }, []);
 
   const getRoom = useCallback(
     (rId: string): Room | undefined => {
@@ -474,6 +630,7 @@ export function Space() {
     getRoom,
     useCallback(
       (parentId, roomId) => {
+        if (alternativeSidebar) return false;
         if (!closedCategories.has(makeNavCategoryId(space.roomId, parentId))) {
           return false;
         }
@@ -481,16 +638,58 @@ export function Space() {
           roomToUnread.has(roomId) || roomId === selectedRoomId || callEmbed?.roomId === roomId;
         return !showRoomAnyway;
       },
-      [space.roomId, closedCategories, roomToUnread, selectedRoomId, callEmbed]
+      [alternativeSidebar, space.roomId, closedCategories, roomToUnread, selectedRoomId, callEmbed]
     ),
     useCallback(
-      (sId) => closedCategories.has(makeNavCategoryId(space.roomId, sId)),
-      [closedCategories, space.roomId]
+      (sId) => (alternativeSidebar ? false : closedCategories.has(makeNavCategoryId(space.roomId, sId))),
+      [alternativeSidebar, closedCategories, space.roomId]
     )
   );
+  const { rooms: hierarchyRooms } = useFetchSpaceHierarchyLevel(space.roomId, alternativeSidebar);
+  const unjoinedRoomSummaries = useMemo(
+    () => Array.from(hierarchyRooms.values()).reduce<
+      { roomId: string; name?: string; alias?: string; memberCount?: number; avatarUrl?: string }[]
+    >((acc, room) => {
+      if (room.room_type === 'm.space') return acc;
+      const roomId = getHierarchyRoomId(room);
+      if (!roomId || allJoinedRooms.has(roomId)) return acc;
+      acc.push({
+        roomId,
+        name: getHierarchyRoomName(room),
+        alias: getHierarchyRoomAlias(room),
+        memberCount: getHierarchyRoomMemberCount(room),
+        avatarUrl: getHierarchyRoomAvatarUrl(room),
+      });
+      return acc;
+    }, []),
+    [
+      hierarchyRooms,
+      allJoinedRooms,
+      getHierarchyRoomId,
+      getHierarchyRoomName,
+      getHierarchyRoomAlias,
+      getHierarchyRoomMemberCount,
+      getHierarchyRoomAvatarUrl,
+    ]
+  );
+
+  const alternativeItems = useMemo(() => {
+    const seen = new Set<string>();
+    const items: string[] = [];
+    const push = (roomId: string) => {
+      if (seen.has(roomId)) return;
+      seen.add(roomId);
+      items.push(roomId);
+    };
+    hierarchy.forEach((item) => {
+      if (item.roomId === space.roomId) return;
+      push(item.roomId);
+    });
+    return items;
+  }, [space.roomId, hierarchy]);
 
   const virtualizer = useVirtualizer({
-    count: hierarchy.length,
+    count: alternativeSidebar ? alternativeItems.length : hierarchy.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 0,
     overscan: 10,
@@ -500,90 +699,262 @@ export function Space() {
     closedCategories.has(categoryId)
   );
 
-  const getToLink = (roomId: string) =>
-    getSpaceRoomPath(spaceIdOrAlias, getCanonicalAliasOrRoomId(mx, roomId));
+  const getToLink = useCallback(
+    (roomId: string) => getSpaceRoomPath(spaceIdOrAlias, getCanonicalAliasOrRoomId(mx, roomId)),
+    [mx, spaceIdOrAlias]
+  );
+  const handleUnjoinedItemClick = useCallback((roomId: string, roomName: string) => {
+    setJoinPrompt({ roomId, roomName });
+  }, []);
+  const handleJoinConfirmDone = useCallback(
+    (joinedRoomId: string) => {
+      setJoinPrompt(undefined);
+      navigate(getToLink(joinedRoomId));
+    },
+    [navigate, getToLink]
+  );
 
   return (
     <PageNav size={alternativeSidebar ? '500' : '400'}>
       <SpaceHeader searchSelected={searchSelected} />
       <PageNavContent scrollRef={scrollRef}>
-        <Box direction="Column" gap="300">
+        <Box direction="Column" gap={alternativeSidebar ? '0' : '300'}>
           {tombstoneEvent && (
             <SpaceTombstone
               roomId={space.roomId}
               replacementRoomId={tombstoneEvent.getContent().replacement_room}
             />
           )}
-          <NavCategory>
-            <NavItem variant="Background" radii="400" aria-selected={lobbySelected}>
-              <NavLink to={getSpaceLobbyPath(getCanonicalAliasOrRoomId(mx, space.roomId))}>
-                <NavItemContent>
-                  <Box as="span" grow="Yes" alignItems="Center" gap="200">
-                    <Avatar size="200" radii="400">
-                      <Icon src={Icons.Flag} size="100" filled={lobbySelected} />
-                    </Avatar>
-                    <Box as="span" grow="Yes">
-                      <Text as="span" size="Inherit" truncate>
-                        Lobby
-                      </Text>
-                    </Box>
-                  </Box>
-                </NavItemContent>
-              </NavLink>
-            </NavItem>
-          </NavCategory>
-          <NavCategory
-            style={{
-              height: virtualizer.getTotalSize(),
-              position: 'relative',
-            }}
-          >
-            {virtualizer.getVirtualItems().map((vItem) => {
-              const { roomId } = hierarchy[vItem.index] ?? {};
-              const room = mx.getRoom(roomId);
-              if (!room) return null;
+          {alternativeSidebar ? (
+            <>
+              <NavCategory
+                style={{
+                  height: virtualizer.getTotalSize(),
+                  position: 'relative',
+                }}
+              >
+                {virtualizer.getVirtualItems().map((vItem) => {
+                  const roomId = alternativeItems[vItem.index];
+                  const room = roomId ? mx.getRoom(roomId) : undefined;
+                  if (!room) return null;
+                  const isSpaceItem = room.isSpaceRoom();
+                  const isDirect = mDirects.has(roomId);
+                  const previewSourceRoom = isSpaceItem
+                    ? getSpaceChildren(room)
+                        .map((childId) => mx.getRoom(childId))
+                        .filter((childRoom): childRoom is NonNullable<typeof childRoom> => Boolean(childRoom))
+                        .sort(
+                          (a, b) =>
+                            (b.getLastActiveTimestamp() ?? Number.MIN_SAFE_INTEGER) -
+                            (a.getLastActiveTimestamp() ?? Number.MIN_SAFE_INTEGER)
+                        )[0] ?? room
+                    : room;
 
-              if (room.isSpaceRoom()) {
-                const categoryId = makeNavCategoryId(space.roomId, roomId);
-
-                return (
-                  <VirtualTile
-                    virtualItem={vItem}
-                    key={vItem.index}
-                    ref={virtualizer.measureElement}
-                  >
-                    <div style={{ paddingTop: vItem.index === 0 ? undefined : config.space.S400 }}>
-                      <NavCategoryHeader>
-                        <RoomNavCategoryButton
-                          data-category-id={categoryId}
-                          onClick={handleCategoryClick}
-                          closed={closedCategories.has(categoryId)}
+                  return (
+                    <VirtualTile virtualItem={vItem} key={vItem.index} ref={virtualizer.measureElement}>
+                      <RoomNavItem
+                        room={room}
+                        selected={
+                          isSpaceItem
+                            ? selectedSpaceId === roomId && lobbySelected
+                            : selectedRoomId === roomId
+                        }
+                        showAvatar
+                        direct={isDirect}
+                        showLastMessage={showLastMessage}
+                        compactChats={compactChats}
+                        alternativeSidebarLayout
+                        roundAvatars={roundAvatars}
+                        previewSourceRoom={previewSourceRoom}
+                        linkPath={
+                          isSpaceItem
+                            ? getSpaceLobbyPath(getCanonicalAliasOrRoomId(mx, roomId))
+                            : getToLink(roomId)
+                        }
+                        notificationMode={getRoomNotificationMode(notificationPreferences, room.roomId)}
+                      />
+                    </VirtualTile>
+                  );
+                })}
+              </NavCategory>
+              {unjoinedRoomSummaries.length > 0 && (
+                <NavCategory>
+                  {unjoinedRoomSummaries.map((room) => (
+                    <NavItem
+                      key={room.roomId}
+                      variant="Background"
+                      radii="400"
+                      style={{ margin: 0, marginBottom: config.space.S100 }}
+                    >
+                      <NavButton onClick={() => handleUnjoinedItemClick(room.roomId, room.name || room.alias || room.roomId)}>
+                        <NavItemContent
+                          style={{
+                            paddingLeft: alternativeHorizontalPadding,
+                            paddingTop: compactChats ? config.space.S100 : config.space.S200,
+                            paddingBottom: compactChats ? config.space.S100 : config.space.S200,
+                          }}
                         >
-                          {roomId === space.roomId ? 'Rooms' : room?.name}
-                        </RoomNavCategoryButton>
-                      </NavCategoryHeader>
-                    </div>
-                  </VirtualTile>
-                );
-              }
+                          <Box as="span" grow="Yes" alignItems="Center" gap="300">
+                            <Avatar
+                              size={alternativeAvatarSize}
+                              radii={roundAvatars ? 'Pill' : '400'}
+                              style={alternativeAvatarStyle}
+                            >
+                              <RoomAvatar
+                                roomId={room.roomId}
+                                src={
+                                  room.avatarUrl
+                                    ? mxcUrlToHttp(mx, room.avatarUrl, useAuthentication, 96, 96, 'crop') ??
+                                      undefined
+                                    : undefined
+                                }
+                                alt={room.name || room.alias || room.roomId}
+                                renderFallback={() => (
+                                  <Box as="span" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                    <Text
+                                      as="span"
+                                      size="H2"
+                                      style={{
+                                        lineHeight: 1,
+                                        fontWeight: config.fontWeight.W400,
+                                        position: 'absolute',
+                                        left: '50%',
+                                        top: '50%',
+                                        transform: 'translate(-50%, -50%) translate(0.25px, 0.5px)',
+                                      }}
+                                    >
+                                      {nameInitials(room.name || room.alias || room.roomId)}
+                                    </Text>
+                                  </Box>
+                                )}
+                              />
+                            </Avatar>
+                            <Box
+                              as="span"
+                              grow="Yes"
+                              direction="Column"
+                              gap={showLastMessage ? '100' : undefined}
+                            >
+                              <Text
+                                as="span"
+                                size={!compactChats ? 'T400' : 'Inherit'}
+                                style={{ fontWeight: 500 }}
+                                truncate
+                              >
+                                {room.name || room.alias || room.roomId}
+                              </Text>
+                              {showLastMessage && (
+                                <Text as="span" size={compactChats ? 'T200' : 'T300'} priority="300" truncate>
+                                  {room.memberCount === undefined
+                                    ? 'Members unknown'
+                                    : `${room.memberCount} ${room.memberCount === 1 ? 'Member' : 'Members'}`}
+                                </Text>
+                              )}
+                            </Box>
+                            <Box as="span" shrink="No">
+                              <Chip
+                                as="span"
+                                variant="Secondary"
+                                fill="Soft"
+                                size="400"
+                                radii="Pill"
+                                before={<Icon src={Icons.Plus} size="50" />}
+                              >
+                                <Text as="span" size="B300">
+                                  Join
+                                </Text>
+                              </Chip>
+                            </Box>
+                          </Box>
+                        </NavItemContent>
+                      </NavButton>
+                    </NavItem>
+                  ))}
+                </NavCategory>
+              )}
+            </>
+          ) : (
+            <>
+              <NavCategory>
+                <NavItem variant="Background" radii="400" aria-selected={lobbySelected}>
+                  <NavLink to={getSpaceLobbyPath(getCanonicalAliasOrRoomId(mx, space.roomId))}>
+                    <NavItemContent>
+                      <Box as="span" grow="Yes" alignItems="Center" gap="200">
+                        <Avatar size="200" radii="400">
+                          <Icon src={Icons.Flag} size="100" filled={lobbySelected} />
+                        </Avatar>
+                        <Box as="span" grow="Yes">
+                          <Text as="span" size="Inherit" truncate>
+                            Lobby
+                          </Text>
+                        </Box>
+                      </Box>
+                    </NavItemContent>
+                  </NavLink>
+                </NavItem>
+              </NavCategory>
+              <NavCategory
+                style={{
+                  height: virtualizer.getTotalSize(),
+                  position: 'relative',
+                }}
+              >
+                {virtualizer.getVirtualItems().map((vItem) => {
+                  const { roomId } = hierarchy[vItem.index] ?? {};
+                  const room = mx.getRoom(roomId);
+                  if (!room) return null;
 
-              return (
-                <VirtualTile virtualItem={vItem} key={vItem.index} ref={virtualizer.measureElement}>
-                  <RoomNavItem
-                    room={room}
-                    selected={selectedRoomId === roomId}
-                    showAvatar={mDirects.has(roomId)}
-                    direct={mDirects.has(roomId)}
-                    roundAvatars={roundAvatars}
-                    linkPath={getToLink(roomId)}
-                    notificationMode={getRoomNotificationMode(notificationPreferences, room.roomId)}
-                  />
-                </VirtualTile>
-              );
-            })}
-          </NavCategory>
+                  if (room.isSpaceRoom()) {
+                    const categoryId = makeNavCategoryId(space.roomId, roomId);
+
+                    return (
+                      <VirtualTile
+                        virtualItem={vItem}
+                        key={vItem.index}
+                        ref={virtualizer.measureElement}
+                      >
+                        <div style={{ paddingTop: vItem.index === 0 ? undefined : config.space.S400 }}>
+                          <NavCategoryHeader>
+                            <RoomNavCategoryButton
+                              data-category-id={categoryId}
+                              onClick={handleCategoryClick}
+                              closed={closedCategories.has(categoryId)}
+                            >
+                              {roomId === space.roomId ? 'Rooms' : room?.name}
+                            </RoomNavCategoryButton>
+                          </NavCategoryHeader>
+                        </div>
+                      </VirtualTile>
+                    );
+                  }
+
+                  return (
+                    <VirtualTile virtualItem={vItem} key={vItem.index} ref={virtualizer.measureElement}>
+                      <RoomNavItem
+                        room={room}
+                        selected={selectedRoomId === roomId}
+                        showAvatar={mDirects.has(roomId)}
+                        direct={mDirects.has(roomId)}
+                        roundAvatars={roundAvatars}
+                        linkPath={getToLink(roomId)}
+                        notificationMode={getRoomNotificationMode(notificationPreferences, room.roomId)}
+                      />
+                    </VirtualTile>
+                  );
+                })}
+              </NavCategory>
+            </>
+          )}
         </Box>
       </PageNavContent>
+      {joinPrompt && (
+        <JoinRoomConfirmPrompt
+          roomId={joinPrompt.roomId}
+          roomName={joinPrompt.roomName}
+          onDone={handleJoinConfirmDone}
+          onCancel={() => setJoinPrompt(undefined)}
+        />
+      )}
     </PageNav>
   );
 }
