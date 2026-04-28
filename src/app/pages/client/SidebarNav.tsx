@@ -19,10 +19,19 @@ import {
 } from './sidebar';
 import { CreateTab } from './sidebar/CreateTab';
 import { useAlternativeSidebarSetting } from '../../features/settings/lumiere-settings/store';
+import { useHomeSelected } from '../../hooks/router/useHomeSelected';
 
-export function SidebarNav() {
+type SidebarNavProps = {
+  embedded?: boolean;
+};
+
+export function SidebarNav({ embedded }: SidebarNavProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [alternativeSidebar] = useAlternativeSidebarSetting();
+  const homeSelected = useHomeSelected();
+  const shouldHideInLayout = alternativeSidebar && homeSelected && !embedded;
+
+  if (shouldHideInLayout) return null;
 
   return (
     <Sidebar>
