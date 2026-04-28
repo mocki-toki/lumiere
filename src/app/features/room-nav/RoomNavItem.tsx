@@ -706,7 +706,7 @@ export function RoomNavItem({
               size="300"
               radii="300"
             >
-              <Icon size="50" src={Icons.VerticalDots} />
+              <Icon size={alternativeSidebarLayout ? '200' : '50'} src={Icons.VerticalDots} />
             </IconButton>
           </PopOut>
         </NavItemOptions>
