@@ -36,6 +36,7 @@ import { SyncStatus } from './SyncStatus';
 import { AuthMetadataProvider } from '../../hooks/useAuthMetadata';
 import { getFallbackSession } from '../../state/sessions';
 import { AutoDiscovery } from './AutoDiscovery';
+import { useRoundAvatarsSetting } from '../../features/settings/lumiere-settings/store';
 
 function ClientRootLoading() {
   return (
@@ -144,6 +145,7 @@ type ClientRootProps = {
 };
 export function ClientRoot({ children }: ClientRootProps) {
   const [loading, setLoading] = useState(true);
+  const [roundAvatars] = useRoundAvatarsSetting();
   const { baseUrl, userId } = getFallbackSession() ?? {};
 
   const [loadState, loadMatrix] = useAsyncCallback<MatrixClient, Error, []>(
@@ -173,6 +175,13 @@ export function ClientRoot({ children }: ClientRootProps) {
       startMatrix(mx);
     }
   }, [mx, startMatrix]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      'data-lumiere-round-avatars',
+      roundAvatars ? 'true' : 'false'
+    );
+  }, [roundAvatars]);
 
   useSyncState(
     mx,

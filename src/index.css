@@ -84,6 +84,10 @@ a:hover {
 b {
   font-weight: 500;
 }
+
+html[data-lumiere-round-avatars='true'] ._1684mq51 {
+  border-radius: 9999px !important;
+}
 label {
   margin: 0;
   padding: 0;
