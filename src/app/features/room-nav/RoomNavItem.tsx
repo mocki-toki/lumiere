@@ -626,6 +626,7 @@ export function RoomNavItem({
                 priority={unread ? '500' : '300'}
                 as="span"
                 size={compactChats ? 'Inherit' : 'T400'}
+                style={alternativeSidebarLayout ? { fontWeight: 500 } : undefined}
                 truncate
               >
                 {roomName}
