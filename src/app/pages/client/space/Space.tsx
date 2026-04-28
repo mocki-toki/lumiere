@@ -85,6 +85,7 @@ import { AsyncStatus, useAsyncCallback } from '../../../hooks/useAsyncCallback';
 import { BreakWord } from '../../../styles/Text.css';
 import { InviteUserPrompt } from '../../../components/invite-user-prompt';
 import { useCallEmbed } from '../../../hooks/useCallEmbed';
+import { useRoundAvatarsSetting } from '../../../features/settings/lumiere-settings/store';
 
 type SpaceMenuProps = {
   room: Room;
@@ -386,6 +387,7 @@ export function Space() {
   const allRooms = useAtomValue(allRoomsAtom);
   const allJoinedRooms = useMemo(() => new Set(allRooms), [allRooms]);
   const notificationPreferences = useRoomsNotificationPreferencesContext();
+  const [roundAvatars] = useRoundAvatarsSetting();
 
   const tombstoneEvent = useStateEvent(space, StateEvent.RoomTombstone);
   const selectedRoomId = useSelectedRoom();
@@ -526,6 +528,7 @@ export function Space() {
                     selected={selectedRoomId === roomId}
                     showAvatar={mDirects.has(roomId)}
                     direct={mDirects.has(roomId)}
+                    roundAvatars={roundAvatars}
                     linkPath={getToLink(roomId)}
                     notificationMode={getRoomNotificationMode(notificationPreferences, room.roomId)}
                   />

@@ -51,7 +51,10 @@ import {
   useRoomsNotificationPreferencesContext,
 } from '../../../hooks/useRoomsNotificationPreferences';
 import { useDirectCreateSelected } from '../../../hooks/router/useDirectSelected';
-import { useAlternativeSidebarSetting } from '../../../features/settings/lumiere-settings/store';
+import {
+  useAlternativeSidebarSetting,
+  useRoundAvatarsSetting,
+} from '../../../features/settings/lumiere-settings/store';
 import { AlternativeSidebarCreateFab } from '../sidebar/AlternativeSidebarCreateFab';
 
 type DirectMenuProps = {
@@ -174,6 +177,7 @@ export function Direct() {
   const mx = useMatrixClient();
   useNavToActivePathMapper('direct');
   const [alternativeSidebar] = useAlternativeSidebarSetting();
+  const [roundAvatars] = useRoundAvatarsSetting();
   const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const directs = useDirectRooms();
@@ -213,7 +217,7 @@ export function Direct() {
   }, [alternativeSidebar, location.pathname, navigate]);
 
   return (
-    <PageNav>
+    <PageNav size={alternativeSidebar ? '500' : '400'}>
       <Box grow="Yes" direction="Column" style={{ position: 'relative' }}>
         <DirectHeader />
         {noRoomToDisplay ? (
@@ -274,6 +278,7 @@ export function Direct() {
                           selected={selected}
                           showAvatar
                           direct
+                          roundAvatars={roundAvatars}
                           linkPath={getDirectRoomPath(getCanonicalAliasOrRoomId(mx, roomId))}
                           notificationMode={getRoomNotificationMode(
                             notificationPreferences,

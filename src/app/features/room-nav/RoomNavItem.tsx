@@ -33,16 +33,18 @@ import { copyToClipboard } from '../../utils/dom';
 import { markAsRead } from '../../utils/notifications';
 import { UseStateProvider } from '../../components/UseStateProvider';
 import { LeaveRoomPrompt } from '../../components/leave-room-prompt';
+import { LeaveSpacePrompt } from '../../components/leave-space-prompt';
 import { useRoomTypingMember } from '../../hooks/useRoomTypingMembers';
 import { TypingIndicator } from '../../components/typing-indicator';
 import { stopPropagation } from '../../utils/keyboard';
 import { getMatrixToRoom } from '../../plugins/matrix-to';
-import { getCanonicalAliasOrRoomId, isRoomAlias } from '../../utils/matrix';
+import { getCanonicalAliasOrRoomId, getMxIdLocalPart, isRoomAlias } from '../../utils/matrix';
 import { getViaServers } from '../../plugins/via-servers';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
 import { useSetting } from '../../state/hooks/settings';
 import { settingsAtom } from '../../state/settings';
 import { useOpenRoomSettings } from '../../state/hooks/roomSettings';
+import { useOpenSpaceSettings } from '../../state/hooks/spaceSettings';
 import { useSpaceOptionally } from '../../hooks/useSpace';
 import {
   getRoomNotificationModeIcon,
@@ -59,7 +61,7 @@ import { callChatAtom } from '../../state/callEmbed';
 import { useCallPreferencesAtom } from '../../state/hooks/callPreferences';
 import { useAutoDiscoveryInfo } from '../../hooks/useAutoDiscoveryInfo';
 import { livekitSupport } from '../../hooks/useLivekitSupport';
-import { StateEvent } from '../../../types/matrix/room';
+import { MessageEvent, StateEvent } from '../../../types/matrix/room';
 
 type RoomNavItemMenuProps = {
   room: Room;
@@ -77,7 +79,9 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
     const permissions = useRoomPermissions(creators, powerLevels);
     const canInvite = permissions.action('invite', mx.getSafeUserId());
     const openRoomSettings = useOpenRoomSettings();
+    const openSpaceSettings = useOpenSpaceSettings();
     const space = useSpaceOptionally();
+    const isSpace = room.getType() === 'm.space';
 
     const [invitePrompt, setInvitePrompt] = useState(false);
 
@@ -101,6 +105,105 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
       openRoomSettings(room.roomId, space?.roomId);
       requestClose();
     };
+    const handleSpaceSettings = () => {
+      openSpaceSettings(room.roomId, space?.roomId);
+      requestClose();
+    };
+
+    if (isSpace) {
+      return (
+        <Menu ref={ref} style={{ maxWidth: toRem(160), width: '100vw' }}>
+          {invitePrompt && room && (
+            <InviteUserPrompt
+              room={room}
+              requestClose={() => {
+                setInvitePrompt(false);
+                requestClose();
+              }}
+            />
+          )}
+          <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+            <MenuItem
+              onClick={handleMarkAsRead}
+              size="300"
+              after={<Icon size="100" src={Icons.CheckTwice} />}
+              radii="300"
+              disabled={!unread}
+            >
+              <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+                Mark as Read
+              </Text>
+            </MenuItem>
+          </Box>
+          <Line variant="Surface" size="300" />
+          <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+            <MenuItem
+              onClick={handleInvite}
+              variant="Primary"
+              fill="None"
+              size="300"
+              after={<Icon size="100" src={Icons.UserPlus} />}
+              radii="300"
+              aria-pressed={invitePrompt}
+              disabled={!canInvite}
+            >
+              <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+                Invite
+              </Text>
+            </MenuItem>
+            <MenuItem
+              onClick={handleCopyLink}
+              size="300"
+              after={<Icon size="100" src={Icons.Link} />}
+              radii="300"
+            >
+              <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+                Copy Link
+              </Text>
+            </MenuItem>
+            <MenuItem
+              onClick={handleSpaceSettings}
+              size="300"
+              after={<Icon size="100" src={Icons.Setting} />}
+              radii="300"
+            >
+              <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+                Space Settings
+              </Text>
+            </MenuItem>
+          </Box>
+          <Line variant="Surface" size="300" />
+          <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+            <UseStateProvider initial={false}>
+              {(promptLeave, setPromptLeave) => (
+                <>
+                  <MenuItem
+                    onClick={() => setPromptLeave(true)}
+                    variant="Critical"
+                    fill="None"
+                    size="300"
+                    after={<Icon size="100" src={Icons.ArrowGoLeft} />}
+                    radii="300"
+                    aria-pressed={promptLeave}
+                  >
+                    <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+                      Leave Space
+                    </Text>
+                  </MenuItem>
+                  {promptLeave && (
+                    <LeaveSpacePrompt
+                      roomId={room.roomId}
+                      onDone={requestClose}
+                      onCancel={() => setPromptLeave(false)}
+                    />
+                  )}
+                </>
+              )}
+            </UseStateProvider>
+          </Box>
+        </Menu>
+      );
+    }
 
     return (
       <Menu ref={ref} style={{ maxWidth: toRem(160), width: '100vw' }}>
@@ -243,12 +346,20 @@ type RoomNavItemProps = {
   notificationMode?: RoomNotificationMode;
   showAvatar?: boolean;
   direct?: boolean;
+  showLastMessage?: boolean;
+  previewSourceRoom?: Room;
+  compactChats?: boolean;
+  roundAvatars?: boolean;
 };
 export function RoomNavItem({
   room,
   selected,
   showAvatar,
   direct,
+  showLastMessage,
+  previewSourceRoom,
+  compactChats = true,
+  roundAvatars = false,
   notificationMode,
   linkPath,
 }: RoomNavItemProps) {
@@ -264,6 +375,64 @@ export function RoomNavItem({
   );
 
   const roomName = useRoomName(room);
+  const sourceRoom = previewSourceRoom ?? room;
+  const latestRenderedEvent = (() => {
+    const liveEvents = sourceRoom.getLiveTimeline().getEvents();
+    for (let i = liveEvents.length - 1; i >= 0; i -= 1) {
+      const evt = liveEvents[i];
+      if (evt) {
+        const type = evt.getType();
+        if (
+          type === MessageEvent.RoomMessage ||
+          type === MessageEvent.RoomMessageEncrypted ||
+          type === MessageEvent.Sticker ||
+          type === StateEvent.RoomName ||
+          type === StateEvent.RoomTopic ||
+          type === StateEvent.RoomAvatar
+        ) {
+          return evt;
+        }
+      }
+    }
+    return sourceRoom.getLastLiveEvent();
+  })();
+  const roomLastMessage = (() => {
+    const evt = latestRenderedEvent;
+    if (!evt) return undefined;
+
+    const type = evt.getType();
+    const content = evt.getContent<Record<string, unknown>>();
+    const body = typeof content.body === 'string' ? content.body : undefined;
+    const normalizedBody = body?.replace(/\s+/g, ' ').trim();
+    const senderId = evt.getSender();
+    const senderName =
+      (senderId && sourceRoom.getMember(senderId)?.name) ||
+      (senderId && getMxIdLocalPart(senderId)) ||
+      senderId;
+
+    if (type === MessageEvent.RoomMessage || type === MessageEvent.RoomMessageEncrypted) {
+      const text =
+        normalizedBody ||
+        (type === MessageEvent.RoomMessageEncrypted ? 'Encrypted message' : 'Message');
+      return senderName ? `${senderName}: ${text}` : text;
+    }
+    if (type === MessageEvent.Sticker) {
+      const text = normalizedBody || 'Sticker';
+      return senderName ? `${senderName}: ${text}` : text;
+    }
+    if (type === StateEvent.RoomName) {
+      const name = typeof content.name === 'string' ? content.name.trim() : '';
+      if (name) return `Room renamed to ${name}`;
+      return 'Room name updated';
+    }
+    if (type === StateEvent.RoomTopic) {
+      const topic = typeof content.topic === 'string' ? content.topic.trim() : '';
+      if (topic) return `Topic: ${topic}`;
+      return 'Room topic updated';
+    }
+    if (type === StateEvent.RoomAvatar) return 'Room avatar updated';
+    return normalizedBody;
+  })();
 
   const handleContextMenu: MouseEventHandler<HTMLElement> = (evt) => {
     evt.preventDefault();
@@ -313,6 +482,12 @@ export function RoomNavItem({
       startCall(room, callPref);
     }
   };
+  let itemMarginBottom: string | undefined;
+  if (showLastMessage) {
+    itemMarginBottom = compactChats ? config.space.S100 : config.space.S200;
+  } else if (!compactChats) {
+    itemMarginBottom = config.space.S200;
+  }
 
   return (
     <NavItem
@@ -321,14 +496,24 @@ export function RoomNavItem({
       highlight={unread !== undefined}
       aria-selected={selected}
       data-hover={!!menuAnchor}
+      style={{ marginBottom: itemMarginBottom }}
       onContextMenu={handleContextMenu}
       {...hoverProps}
       {...focusWithinProps}
     >
       <NavLink to={linkPath} onClick={room.isCallRoom() ? handleStartCall : undefined}>
-        <NavItemContent>
+        <NavItemContent
+          style={
+            compactChats
+              ? undefined
+              : {
+                  paddingTop: config.space.S100,
+                  paddingBottom: config.space.S100,
+                }
+          }
+        >
           <Box as="span" grow="Yes" alignItems="Center" gap="200">
-            <Avatar size="200" radii="400">
+            <Avatar size={compactChats ? '200' : '300'} radii={roundAvatars ? 'Pill' : '400'}>
               {showAvatar ? (
                 <RoomAvatar
                   roomId={room.roomId}
@@ -356,10 +541,20 @@ export function RoomNavItem({
                 />
               )}
             </Avatar>
-            <Box as="span" grow="Yes">
-              <Text priority={unread ? '500' : '300'} as="span" size="Inherit" truncate>
+            <Box as="span" grow="Yes" direction="Column" gap="50">
+              <Text
+                priority={unread ? '500' : '300'}
+                as="span"
+                size={compactChats ? 'Inherit' : 'T400'}
+                truncate
+              >
                 {roomName}
               </Text>
+              {showLastMessage && roomLastMessage && (
+                <Text as="span" size={compactChats ? 'T200' : 'T300'} priority="300" truncate>
+                  {roomLastMessage}
+                </Text>
+              )}
             </Box>
             {!optionsVisible && !unread && !selected && typingMember.length > 0 && (
               <Badge size="300" variant="Secondary" fill="Soft" radii="Pill" outlined>

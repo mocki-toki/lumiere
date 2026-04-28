@@ -58,6 +58,7 @@ import { useNavToActivePathMapper } from '../../../hooks/useNavToActivePathMappe
 import { PageNav, PageNavHeader, PageNavContent } from '../../../components/page';
 import { useRoomsUnread } from '../../../state/hooks/unread';
 import { markAsRead } from '../../../utils/notifications';
+import { getSpaceChildren } from '../../../utils/room';
 import { useClosedNavCategoriesAtom } from '../../../state/hooks/closedNavCategories';
 import { stopPropagation } from '../../../utils/keyboard';
 import { useSetting } from '../../../state/hooks/settings';
@@ -70,7 +71,12 @@ import {
 import { UseStateProvider } from '../../../components/UseStateProvider';
 import { JoinAddressPrompt } from '../../../components/join-address-prompt';
 import { _RoomSearchParams } from '../../paths';
-import { useAlternativeSidebarSetting } from '../../../features/settings/lumiere-settings/store';
+import {
+  useAlternativeSidebarSetting,
+  useCompactChatsSetting,
+  useRoundAvatarsSetting,
+  useShowLastMessageSetting,
+} from '../../../features/settings/lumiere-settings/store';
 import { AlternativeSidebarCreateFab } from '../sidebar/AlternativeSidebarCreateFab';
 import { useDirectRooms } from '../direct/useDirectRooms';
 import { useOrphanSpaces } from '../../../state/hooks/roomList';
@@ -89,10 +95,18 @@ type HomeMenuProps = {
 const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(
   ({ alternativeSidebar, onOpenSettings, requestClose }, ref) => {
     const navigate = useNavigate();
+    const mx = useMatrixClient();
     const orphanRooms = useHomeRooms();
+    const directRooms = useDirectRooms();
+    const roomToParents = useAtomValue(roomToParentsAtom);
+    const spaces = useOrphanSpaces(mx, allRoomsAtom, roomToParents);
+    const combinedRooms = useMemo(
+      () => Array.from(new Set([...orphanRooms, ...directRooms, ...spaces])),
+      [orphanRooms, directRooms, spaces]
+    );
     const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
     const unread = useRoomsUnread(orphanRooms, roomToUnreadAtom);
-    const mx = useMatrixClient();
+    const combinedUnread = useRoomsUnread(combinedRooms, roomToUnreadAtom);
     const useAuthentication = useMediaAuthentication();
     const userId = mx.getUserId() ?? '';
     const profile = useUserProfile(userId);
@@ -102,15 +116,19 @@ const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(
       : undefined;
 
     const handleMarkAsRead = () => {
-      if (!unread) return;
-      orphanRooms.forEach((rId) => markAsRead(mx, rId, hideActivity));
+      const targetRooms = alternativeSidebar ? combinedRooms : orphanRooms;
+      const targetUnread = alternativeSidebar ? combinedUnread : unread;
+      if (!targetUnread) return;
+      targetRooms.forEach((rId) => markAsRead(mx, rId, hideActivity));
       requestClose();
     };
 
     if (alternativeSidebar) {
       const handleInbox = () => {
         const path =
-          unread && unread.total > 0 ? getInboxInvitesPath() : getInboxNotificationsPath();
+          combinedUnread && combinedUnread.total > 0
+            ? getInboxInvitesPath()
+            : getInboxNotificationsPath();
         navigate(path);
         requestClose();
       };
@@ -127,7 +145,7 @@ const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(
               size="300"
               after={<Icon size="100" src={Icons.CheckTwice} />}
               radii="300"
-              aria-disabled={!unread}
+              aria-disabled={!combinedUnread}
             >
               <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
                 Mark as Read
@@ -150,13 +168,26 @@ const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(
               onClick={handleOpenSettings}
               size="300"
               after={
-                <Avatar size="200" radii="300">
-                  <UserAvatar
-                    userId={userId}
-                    src={avatarUrl}
-                    renderFallback={() => <Text size="H6">{nameInitials(displayName)}</Text>}
-                  />
-                </Avatar>
+                <Box
+                  style={{
+                    marginLeft: config.space.S300,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Avatar
+                    size="200"
+                    radii="Pill"
+                    style={{ width: toRem(18), height: toRem(18), overflow: 'hidden' }}
+                  >
+                    <UserAvatar
+                      userId={userId}
+                      src={avatarUrl}
+                      renderFallback={() => <Text size="T200">{nameInitials(displayName)}</Text>}
+                    />
+                  </Avatar>
+                </Box>
               }
               radii="300"
             >
@@ -308,6 +339,9 @@ export function Home() {
   const mx = useMatrixClient();
   useNavToActivePathMapper('home');
   const [alternativeSidebar] = useAlternativeSidebarSetting();
+  const [showLastMessage] = useShowLastMessageSetting();
+  const [compactChats] = useCompactChatsSetting();
+  const [roundAvatars] = useRoundAvatarsSetting();
   const scrollRef = useRef<HTMLDivElement>(null);
   const rooms = useHomeRooms();
   const directs = useDirectRooms();
@@ -360,7 +394,12 @@ export function Home() {
   const roomsVirtualizer = useVirtualizer({
     count: displayRooms.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 38,
+    estimateSize: () => {
+      if (!alternativeSidebar) return 38;
+      if (!compactChats && !showLastMessage) return 44;
+      if (showLastMessage) return compactChats ? 52 : 60;
+      return 38;
+    },
     overscan: 10,
   });
 
@@ -370,7 +409,7 @@ export function Home() {
   const handleSearchClick = () => navigate(getHomeSearchPath());
 
   return (
-    <PageNav>
+    <PageNav size={alternativeSidebar ? '500' : '400'}>
       <Box grow="Yes" direction="Column" style={{ position: 'relative' }}>
         <HomeHeader
           alternativeSidebar={alternativeSidebar}
@@ -465,6 +504,18 @@ export function Home() {
                     const selected = selectedRoomId === roomId;
                     const isDirect = alternativeSidebar && mDirects.has(roomId);
                     const isSpace = alternativeSidebar && room.getType() === 'm.space';
+                    const previewSourceRoom = isSpace
+                      ? getSpaceChildren(room)
+                          .map((childId) => mx.getRoom(childId))
+                          .filter((childRoom): childRoom is NonNullable<typeof childRoom> =>
+                            Boolean(childRoom)
+                          )
+                          .sort(
+                            (a, b) =>
+                              (b.getLastActiveTimestamp() ?? Number.MIN_SAFE_INTEGER) -
+                              (a.getLastActiveTimestamp() ?? Number.MIN_SAFE_INTEGER)
+                          )[0] ?? room
+                      : room;
 
                     return (
                       <VirtualTile
@@ -477,6 +528,10 @@ export function Home() {
                           selected={selected}
                           showAvatar={isDirect || isSpace}
                           direct={isDirect}
+                          showLastMessage={alternativeSidebar && showLastMessage}
+                          compactChats={!alternativeSidebar || compactChats}
+                          roundAvatars={roundAvatars}
+                          previewSourceRoom={previewSourceRoom}
                           linkPath={getHomeRoomPath(getCanonicalAliasOrRoomId(mx, roomId))}
                           notificationMode={getRoomNotificationMode(
                             notificationPreferences,
