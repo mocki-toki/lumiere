@@ -13,8 +13,8 @@ export const FabSidebarItem = style({
 });
 
 export const FabSidebarAvatar = style({
-  width: toRem(48),
-  height: toRem(48),
+  width: toRem(56),
+  height: toRem(56),
   borderRadius: '9999px',
 });
 

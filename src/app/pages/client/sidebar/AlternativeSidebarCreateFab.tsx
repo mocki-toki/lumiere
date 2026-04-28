@@ -208,7 +208,7 @@ export function AlternativeSidebarCreateFab() {
                 outlined
                 onClick={handleOpenMenu}
               >
-                <Icon src={Icons.Plus} />
+                <Icon size="500" src={Icons.Plus} />
               </SidebarAvatar>
               {joinAddress && (
                 <JoinAddressPrompt

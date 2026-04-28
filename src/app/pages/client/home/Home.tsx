@@ -86,6 +86,7 @@ import { nameInitials } from '../../../utils/common';
 import { UserAvatar } from '../../../components/user-avatar';
 import { Modal500 } from '../../../components/Modal500';
 import { Settings } from '../../../features/settings';
+import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
 
 type HomeMenuProps = {
   alternativeSidebar: boolean;
@@ -94,6 +95,13 @@ type HomeMenuProps = {
 };
 const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(
   ({ alternativeSidebar, onOpenSettings, requestClose }, ref) => {
+    const screenSize = useScreenSizeContext();
+    const touchMenu = screenSize === ScreenSize.Mobile || screenSize === ScreenSize.Tablet;
+    const menuIconSize = touchMenu ? '200' : '100';
+    const menuIconWrapStyle = touchMenu ? { marginLeft: config.space.S500 } : undefined;
+    const menuMaxWidth = touchMenu ? toRem(320) : toRem(320);
+    const menuGroupGap = touchMenu ? '200' : '100';
+    const menuGroupPadding = touchMenu ? config.space.S200 : config.space.S100;
     const navigate = useNavigate();
     const mx = useMatrixClient();
     const orphanRooms = useHomeRooms();
@@ -138,12 +146,16 @@ const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(
       };
 
       return (
-        <Menu ref={ref} style={{ width: 'max-content', maxWidth: toRem(320) }}>
-          <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+        <Menu ref={ref} style={{ width: 'max-content', maxWidth: menuMaxWidth }}>
+          <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
             <MenuItem
               onClick={handleMarkAsRead}
               size="300"
-              after={<Icon size="100" src={Icons.CheckTwice} />}
+              after={
+                <Box style={menuIconWrapStyle}>
+                  <Icon size={menuIconSize} src={Icons.CheckTwice} />
+                </Box>
+              }
               radii="300"
               aria-disabled={!combinedUnread}
             >
@@ -153,11 +165,15 @@ const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(
             </MenuItem>
           </Box>
           <Line variant="Surface" size="300" />
-          <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+          <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
             <MenuItem
               onClick={handleInbox}
               size="300"
-              after={<Icon size="100" src={Icons.Inbox} />}
+              after={
+                <Box style={menuIconWrapStyle}>
+                  <Icon size={menuIconSize} src={Icons.Inbox} />
+                </Box>
+              }
               radii="300"
             >
               <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -170,7 +186,7 @@ const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(
               after={
                 <Box
                   style={{
-                    marginLeft: config.space.S300,
+                    marginLeft: config.space.S200,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -206,7 +222,11 @@ const HomeMenu = forwardRef<HTMLDivElement, HomeMenuProps>(
           <MenuItem
             onClick={handleMarkAsRead}
             size="300"
-            after={<Icon size="100" src={Icons.CheckTwice} />}
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.CheckTwice} />
+              </Box>
+            }
             radii="300"
             aria-disabled={!unread}
           >

@@ -61,6 +61,7 @@ import { callChatAtom } from '../../state/callEmbed';
 import { useCallPreferencesAtom } from '../../state/hooks/callPreferences';
 import { useAutoDiscoveryInfo } from '../../hooks/useAutoDiscoveryInfo';
 import { livekitSupport } from '../../hooks/useLivekitSupport';
+import { ScreenSize, useScreenSizeContext } from '../../hooks/useScreenSize';
 import { MessageEvent, StateEvent } from '../../../types/matrix/room';
 
 type RoomNavItemMenuProps = {
@@ -70,6 +71,13 @@ type RoomNavItemMenuProps = {
 };
 const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
   ({ room, requestClose, notificationMode }, ref) => {
+    const screenSize = useScreenSizeContext();
+    const touchMenu = screenSize === ScreenSize.Mobile || screenSize === ScreenSize.Tablet;
+    const menuIconSize = touchMenu ? '200' : '100';
+    const menuIconWrapStyle = touchMenu ? { marginLeft: config.space.S100 } : undefined;
+    const menuGroupGap = touchMenu ? '200' : '100';
+    const menuGroupPadding = touchMenu ? config.space.S200 : config.space.S100;
+    const menuMaxWidth = touchMenu ? toRem(200) : toRem(160);
     const mx = useMatrixClient();
     const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
     const unread = useRoomUnread(room.roomId, roomToUnreadAtom);
@@ -112,7 +120,7 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
 
     if (isSpace) {
       return (
-        <Menu ref={ref} style={{ maxWidth: toRem(160), width: '100vw' }}>
+        <Menu ref={ref} style={{ maxWidth: menuMaxWidth, width: '100vw' }}>
           {invitePrompt && room && (
             <InviteUserPrompt
               room={room}
@@ -122,11 +130,15 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
               }}
             />
           )}
-          <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+          <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
             <MenuItem
               onClick={handleMarkAsRead}
               size="300"
-              after={<Icon size="100" src={Icons.CheckTwice} />}
+              after={
+                <Box style={menuIconWrapStyle}>
+                  <Icon size={menuIconSize} src={Icons.CheckTwice} />
+                </Box>
+              }
               radii="300"
               disabled={!unread}
             >
@@ -136,13 +148,17 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
             </MenuItem>
           </Box>
           <Line variant="Surface" size="300" />
-          <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+          <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
             <MenuItem
               onClick={handleInvite}
               variant="Primary"
               fill="None"
               size="300"
-              after={<Icon size="100" src={Icons.UserPlus} />}
+              after={
+                <Box style={menuIconWrapStyle}>
+                  <Icon size={menuIconSize} src={Icons.UserPlus} />
+                </Box>
+              }
               radii="300"
               aria-pressed={invitePrompt}
               disabled={!canInvite}
@@ -154,7 +170,11 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
             <MenuItem
               onClick={handleCopyLink}
               size="300"
-              after={<Icon size="100" src={Icons.Link} />}
+              after={
+                <Box style={menuIconWrapStyle}>
+                  <Icon size={menuIconSize} src={Icons.Link} />
+                </Box>
+              }
               radii="300"
             >
               <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -164,7 +184,11 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
             <MenuItem
               onClick={handleSpaceSettings}
               size="300"
-              after={<Icon size="100" src={Icons.Setting} />}
+              after={
+                <Box style={menuIconWrapStyle}>
+                  <Icon size={menuIconSize} src={Icons.Setting} />
+                </Box>
+              }
               radii="300"
             >
               <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -173,7 +197,7 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
             </MenuItem>
           </Box>
           <Line variant="Surface" size="300" />
-          <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+          <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
             <UseStateProvider initial={false}>
               {(promptLeave, setPromptLeave) => (
                 <>
@@ -182,7 +206,11 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
                     variant="Critical"
                     fill="None"
                     size="300"
-                    after={<Icon size="100" src={Icons.ArrowGoLeft} />}
+                    after={
+                      <Box style={menuIconWrapStyle}>
+                        <Icon size={menuIconSize} src={Icons.ArrowGoLeft} />
+                      </Box>
+                    }
                     radii="300"
                     aria-pressed={promptLeave}
                   >
@@ -206,7 +234,7 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
     }
 
     return (
-      <Menu ref={ref} style={{ maxWidth: toRem(160), width: '100vw' }}>
+      <Menu ref={ref} style={{ maxWidth: menuMaxWidth, width: '100vw' }}>
         {invitePrompt && room && (
           <InviteUserPrompt
             room={room}
@@ -216,11 +244,15 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
             }}
           />
         )}
-        <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+        <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
           <MenuItem
             onClick={handleMarkAsRead}
             size="300"
-            after={<Icon size="100" src={Icons.CheckTwice} />}
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.CheckTwice} />
+              </Box>
+            }
             radii="300"
             disabled={!unread}
           >
@@ -236,7 +268,9 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
                   changing ? (
                     <Spinner size="100" variant="Secondary" />
                   ) : (
-                    <Icon size="100" src={getRoomNotificationModeIcon(notificationMode)} />
+                    <Box style={menuIconWrapStyle}>
+                      <Icon size={menuIconSize} src={getRoomNotificationModeIcon(notificationMode)} />
+                    </Box>
                   )
                 }
                 radii="300"
@@ -251,13 +285,17 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
           </RoomNotificationModeSwitcher>
         </Box>
         <Line variant="Surface" size="300" />
-        <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+        <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
           <MenuItem
             onClick={handleInvite}
             variant="Primary"
             fill="None"
             size="300"
-            after={<Icon size="100" src={Icons.UserPlus} />}
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.UserPlus} />
+              </Box>
+            }
             radii="300"
             aria-pressed={invitePrompt}
             disabled={!canInvite}
@@ -269,7 +307,11 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
           <MenuItem
             onClick={handleCopyLink}
             size="300"
-            after={<Icon size="100" src={Icons.Link} />}
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.Link} />
+              </Box>
+            }
             radii="300"
           >
             <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -279,7 +321,11 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
           <MenuItem
             onClick={handleRoomSettings}
             size="300"
-            after={<Icon size="100" src={Icons.Setting} />}
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.Setting} />
+              </Box>
+            }
             radii="300"
           >
             <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -288,7 +334,7 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
           </MenuItem>
         </Box>
         <Line variant="Surface" size="300" />
-        <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+        <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
           <UseStateProvider initial={false}>
             {(promptLeave, setPromptLeave) => (
               <>
@@ -297,7 +343,11 @@ const RoomNavItemMenu = forwardRef<HTMLDivElement, RoomNavItemMenuProps>(
                   variant="Critical"
                   fill="None"
                   size="300"
-                  after={<Icon size="100" src={Icons.ArrowGoLeft} />}
+                  after={
+                    <Box style={menuIconWrapStyle}>
+                      <Icon size={menuIconSize} src={Icons.ArrowGoLeft} />
+                    </Box>
+                  }
                   radii="300"
                   aria-pressed={promptLeave}
                 >
@@ -363,6 +413,8 @@ export function RoomNavItem({
   notificationMode,
   linkPath,
 }: RoomNavItemProps) {
+  const screenSize = useScreenSizeContext();
+  const mobile = screenSize === ScreenSize.Mobile;
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const [hover, setHover] = useState(false);
@@ -488,6 +540,12 @@ export function RoomNavItem({
   } else if (!compactChats) {
     itemMarginBottom = config.space.S200;
   }
+  let avatarSize: '200' | '300' | '400';
+  if (mobile) {
+    avatarSize = compactChats ? '300' : '400';
+  } else {
+    avatarSize = compactChats ? '200' : '300';
+  }
 
   return (
     <NavItem
@@ -503,17 +561,18 @@ export function RoomNavItem({
     >
       <NavLink to={linkPath} onClick={room.isCallRoom() ? handleStartCall : undefined}>
         <NavItemContent
-          style={
-            compactChats
+          style={{
+            paddingLeft: config.space.S100,
+            ...(compactChats
               ? undefined
               : {
                   paddingTop: config.space.S100,
                   paddingBottom: config.space.S100,
-                }
-          }
+                }),
+          }}
         >
-          <Box as="span" grow="Yes" alignItems="Center" gap="200">
-            <Avatar size={compactChats ? '200' : '300'} radii={roundAvatars ? 'Pill' : '400'}>
+          <Box as="span" grow="Yes" alignItems="Center" gap="300">
+            <Avatar size={avatarSize} radii={roundAvatars ? 'Pill' : '400'}>
               {showAvatar ? (
                 <RoomAvatar
                   roomId={room.roomId}

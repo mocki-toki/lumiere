@@ -86,12 +86,20 @@ import { BreakWord } from '../../../styles/Text.css';
 import { InviteUserPrompt } from '../../../components/invite-user-prompt';
 import { useCallEmbed } from '../../../hooks/useCallEmbed';
 import { useRoundAvatarsSetting } from '../../../features/settings/lumiere-settings/store';
+import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
 
 type SpaceMenuProps = {
   room: Room;
   requestClose: () => void;
 };
 const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(({ room, requestClose }, ref) => {
+  const screenSize = useScreenSizeContext();
+  const touchMenu = screenSize === ScreenSize.Mobile || screenSize === ScreenSize.Tablet;
+  const menuIconSize = touchMenu ? '200' : '100';
+  const menuIconWrapStyle = touchMenu ? { marginLeft: config.space.S100 } : undefined;
+  const menuGroupGap = touchMenu ? '200' : '100';
+  const menuGroupPadding = touchMenu ? config.space.S200 : config.space.S100;
+  const menuMaxWidth = touchMenu ? toRem(200) : toRem(160);
   const mx = useMatrixClient();
   const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
   const [developerTools] = useSetting(settingsAtom, 'developerTools');
@@ -140,8 +148,8 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(({ room, requestClo
   };
 
   return (
-    <Menu ref={ref} style={{ maxWidth: toRem(160), width: '100vw' }}>
-      <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+    <Menu ref={ref} style={{ maxWidth: menuMaxWidth, width: '100vw' }}>
+      <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
         {invitePrompt && room && (
           <InviteUserPrompt
             room={room}
@@ -154,7 +162,11 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(({ room, requestClo
         <MenuItem
           onClick={handleMarkAsRead}
           size="300"
-          after={<Icon size="100" src={Icons.CheckTwice} />}
+          after={
+            <Box style={menuIconWrapStyle}>
+              <Icon size={menuIconSize} src={Icons.CheckTwice} />
+            </Box>
+          }
           radii="300"
           disabled={!unread}
         >
@@ -164,13 +176,17 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(({ room, requestClo
         </MenuItem>
       </Box>
       <Line variant="Surface" size="300" />
-      <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+      <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
         <MenuItem
           onClick={handleInvite}
           variant="Primary"
           fill="None"
           size="300"
-          after={<Icon size="100" src={Icons.UserPlus} />}
+          after={
+            <Box style={menuIconWrapStyle}>
+              <Icon size={menuIconSize} src={Icons.UserPlus} />
+            </Box>
+          }
           radii="300"
           aria-pressed={invitePrompt}
           disabled={!canInvite}
@@ -182,7 +198,11 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(({ room, requestClo
         <MenuItem
           onClick={handleCopyLink}
           size="300"
-          after={<Icon size="100" src={Icons.Link} />}
+          after={
+            <Box style={menuIconWrapStyle}>
+              <Icon size={menuIconSize} src={Icons.Link} />
+            </Box>
+          }
           radii="300"
         >
           <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -192,7 +212,11 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(({ room, requestClo
         <MenuItem
           onClick={handleRoomSettings}
           size="300"
-          after={<Icon size="100" src={Icons.Setting} />}
+          after={
+            <Box style={menuIconWrapStyle}>
+              <Icon size={menuIconSize} src={Icons.Setting} />
+            </Box>
+          }
           radii="300"
         >
           <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -203,7 +227,11 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(({ room, requestClo
           <MenuItem
             onClick={handleOpenTimeline}
             size="300"
-            after={<Icon size="100" src={Icons.Terminal} />}
+            after={
+              <Box style={menuIconWrapStyle}>
+                <Icon size={menuIconSize} src={Icons.Terminal} />
+              </Box>
+            }
             radii="300"
           >
             <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -213,7 +241,7 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(({ room, requestClo
         )}
       </Box>
       <Line variant="Surface" size="300" />
-      <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
+      <Box direction="Column" gap={menuGroupGap} style={{ padding: menuGroupPadding }}>
         <UseStateProvider initial={false}>
           {(promptLeave, setPromptLeave) => (
             <>
@@ -222,7 +250,11 @@ const SpaceMenu = forwardRef<HTMLDivElement, SpaceMenuProps>(({ room, requestClo
                 variant="Critical"
                 fill="None"
                 size="300"
-                after={<Icon size="100" src={Icons.ArrowGoLeft} />}
+                after={
+                  <Box style={menuIconWrapStyle}>
+                    <Icon size={menuIconSize} src={Icons.ArrowGoLeft} />
+                  </Box>
+                }
                 radii="300"
                 aria-pressed={promptLeave}
               >
