@@ -47,6 +47,13 @@ html {
   html {
     font-size: 17px;
   }
+
+  body,
+  #root,
+  #root * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
 }
 
 body {
@@ -85,6 +92,19 @@ a {
 }
 
 @media (any-pointer: coarse) {
+  [data-touch-context-menu='true'],
+  [data-touch-context-menu='true'] * {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  [data-touch-context-menu='true'] a {
+    -webkit-touch-callout: none;
+  }
+
   a:hover,
   a:focus-visible,
   button:focus-visible {
