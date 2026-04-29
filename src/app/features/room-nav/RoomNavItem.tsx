@@ -63,6 +63,7 @@ import { useAutoDiscoveryInfo } from '../../hooks/useAutoDiscoveryInfo';
 import { livekitSupport } from '../../hooks/useLivekitSupport';
 import { ScreenSize, useScreenSizeContext } from '../../hooks/useScreenSize';
 import { useCanHover } from '../../hooks/useCanHover';
+import { useTouchLongPressContextMenu } from '../../hooks/useTouchLongPressContextMenu';
 import { MessageEvent, StateEvent } from '../../../types/matrix/room';
 
 type RoomNavItemMenuProps = {
@@ -424,6 +425,7 @@ export function RoomNavItem({
   const [hover, setHover] = useState(false);
   const { hoverProps } = useHover({ onHoverChange: setHover, isDisabled: !canHover });
   const { focusWithinProps } = useFocusWithin({ onFocusWithinChange: setHover });
+  const touchContextMenuProps = useTouchLongPressContextMenu<HTMLDivElement>();
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
   const unread = useRoomUnread(room.roomId, roomToUnreadAtom);
   const typingMember = useRoomTypingMember(room.roomId).filter(
@@ -576,6 +578,7 @@ export function RoomNavItem({
     };
   }
   const userFallbackIconSize = alternativeSidebarLayout && !compactChats ? '200' : '100';
+  const hideMenuButton = alternativeSidebarLayout && mobile;
   const desktopNonCompact = screenSize === ScreenSize.Desktop && !compactChats;
   const alternativeHorizontalPadding =
     screenSize === ScreenSize.Desktop ? config.space.S300 : config.space.S100;
@@ -638,13 +641,14 @@ export function RoomNavItem({
       variant="Background"
       radii="400"
       highlight={unread !== undefined}
-      aria-selected={selected}
+      aria-selected={selected || !!menuAnchor}
       data-hover={!!menuAnchor}
       style={{
         margin: alternativeSidebarLayout ? 0 : undefined,
         marginBottom: itemMarginBottom,
       }}
       onContextMenu={handleContextMenu}
+      {...touchContextMenuProps}
       {...hoverProps}
       {...focusWithinProps}
     >
@@ -710,47 +714,80 @@ export function RoomNavItem({
           {selected && (callEmbed?.roomId === room.roomId || room.isCallRoom()) && (
             <CallChatToggle />
           )}
-          <PopOut
-            id={`menu-${room.roomId}`}
-            aria-expanded={!!menuAnchor}
-            anchor={menuAnchor}
-            offset={menuAnchor?.width === 0 ? 0 : undefined}
-            alignOffset={menuAnchor?.width === 0 ? 0 : -5}
-            position="Bottom"
-            align={menuAnchor?.width === 0 ? 'Start' : 'End'}
-            content={
-              <FocusTrap
-                focusTrapOptions={{
-                  initialFocus: false,
-                  returnFocusOnDeactivate: false,
-                  onDeactivate: () => setMenuAnchor(undefined),
-                  clickOutsideDeactivates: true,
-                  isKeyForward: (evt: KeyboardEvent) => evt.key === 'ArrowDown',
-                  isKeyBackward: (evt: KeyboardEvent) => evt.key === 'ArrowUp',
-                  escapeDeactivates: stopPropagation,
-                }}
-              >
-                <RoomNavItemMenu
-                  room={room}
-                  requestClose={() => setMenuAnchor(undefined)}
-                  notificationMode={notificationMode}
-                />
-              </FocusTrap>
-            }
-          >
-            <IconButton
-              onClick={handleOpenMenu}
-              aria-pressed={!!menuAnchor}
-              aria-controls={`menu-${room.roomId}`}
-              aria-label="More Options"
-              variant="Background"
-              fill="None"
-              size="300"
-              radii="300"
+          {hideMenuButton ? (
+            menuAnchor && (
+              <PopOut
+                id={`menu-${room.roomId}`}
+                aria-expanded={!!menuAnchor}
+                anchor={menuAnchor}
+                offset={menuAnchor?.width === 0 ? 0 : undefined}
+                alignOffset={menuAnchor?.width === 0 ? 0 : -5}
+                position="Bottom"
+                align={menuAnchor?.width === 0 ? 'Start' : 'End'}
+                content={
+                  <FocusTrap
+                    focusTrapOptions={{
+                      initialFocus: false,
+                      returnFocusOnDeactivate: false,
+                      onDeactivate: () => setMenuAnchor(undefined),
+                      clickOutsideDeactivates: true,
+                      isKeyForward: (evt: KeyboardEvent) => evt.key === 'ArrowDown',
+                      isKeyBackward: (evt: KeyboardEvent) => evt.key === 'ArrowUp',
+                      escapeDeactivates: stopPropagation,
+                    }}
+                  >
+                    <RoomNavItemMenu
+                      room={room}
+                      requestClose={() => setMenuAnchor(undefined)}
+                      notificationMode={notificationMode}
+                    />
+                  </FocusTrap>
+                }
+              />
+            )
+          ) : (
+            <PopOut
+              id={`menu-${room.roomId}`}
+              aria-expanded={!!menuAnchor}
+              anchor={menuAnchor}
+              offset={menuAnchor?.width === 0 ? 0 : undefined}
+              alignOffset={menuAnchor?.width === 0 ? 0 : -5}
+              position="Bottom"
+              align={menuAnchor?.width === 0 ? 'Start' : 'End'}
+              content={
+                <FocusTrap
+                  focusTrapOptions={{
+                    initialFocus: false,
+                    returnFocusOnDeactivate: false,
+                    onDeactivate: () => setMenuAnchor(undefined),
+                    clickOutsideDeactivates: true,
+                    isKeyForward: (evt: KeyboardEvent) => evt.key === 'ArrowDown',
+                    isKeyBackward: (evt: KeyboardEvent) => evt.key === 'ArrowUp',
+                    escapeDeactivates: stopPropagation,
+                  }}
+                >
+                  <RoomNavItemMenu
+                    room={room}
+                    requestClose={() => setMenuAnchor(undefined)}
+                    notificationMode={notificationMode}
+                  />
+                </FocusTrap>
+              }
             >
-              <Icon size={menuIconSize} src={Icons.VerticalDots} />
-            </IconButton>
-          </PopOut>
+              <IconButton
+                onClick={handleOpenMenu}
+                aria-pressed={!!menuAnchor}
+                aria-controls={`menu-${room.roomId}`}
+                aria-label="More Options"
+                variant="Background"
+                fill="None"
+                size="300"
+                radii="300"
+              >
+                <Icon size={menuIconSize} src={Icons.VerticalDots} />
+              </IconButton>
+            </PopOut>
+          )}
         </NavItemOptions>
       )}
     </NavItem>

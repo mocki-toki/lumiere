@@ -17,6 +17,7 @@ import {
   SidebarItemTooltip,
 } from '../../../components/sidebar';
 import { useDirectSelected } from '../../../hooks/router/useDirectSelected';
+import { useTouchLongPressContextMenu } from '../../../hooks/useTouchLongPressContextMenu';
 import { UnreadBadge } from '../../../components/unread-badge';
 import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
 import { useNavToActivePathAtom } from '../../../state/hooks/navToActivePath';
@@ -79,6 +80,7 @@ export function DirectTab() {
   const directs = useDirects(mx, allRoomsAtom, mDirects);
   const directUnread = useRoomsUnread(directs, roomToUnreadAtom);
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
+  const touchContextMenuProps = useTouchLongPressContextMenu<HTMLButtonElement>();
 
   const directSelected = useDirectSelected();
 
@@ -101,7 +103,7 @@ export function DirectTab() {
     });
   };
   return (
-    <SidebarItem active={directSelected}>
+    <SidebarItem active={directSelected || !!menuAnchor} data-menu-open={!!menuAnchor}>
       <SidebarItemTooltip tooltip="Direct Messages">
         {(triggerRef) => (
           <SidebarAvatar
@@ -110,6 +112,7 @@ export function DirectTab() {
             outlined
             onClick={handleDirectClick}
             onContextMenu={handleContextMenu}
+            {...touchContextMenuProps}
           >
             <Icon src={Icons.User} filled={directSelected} />
           </SidebarAvatar>

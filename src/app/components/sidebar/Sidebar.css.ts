@@ -88,6 +88,12 @@ export const SidebarItem = recipe({
           background: 'CurrentColor',
           transition: 'height 200ms linear',
         },
+        '&[data-menu-open=true]::before': {
+          display: 'block',
+          height: toRem(24),
+          width: toRem(3 + PUSH_X),
+          transition: 'none',
+        },
       },
       '@media': {
         [canHoverMediaQuery]: {
