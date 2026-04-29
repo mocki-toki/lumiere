@@ -22,6 +22,7 @@ import {
   as,
   color,
   config,
+  toRem,
 } from 'folds';
 import React, {
   FormEventHandler,
@@ -80,6 +81,7 @@ import colorMXID from '../../../../util/colorMXID';
 import { getPowerTagIconSrc } from '../../../hooks/useMemberPowerTag';
 import { useCanHover } from '../../../hooks/useCanHover';
 import { useTouchLongPressContextMenu } from '../../../hooks/useTouchLongPressContextMenu';
+import { useTelegramStyleChatSetting } from '../../settings/lumiere-settings/store';
 
 export type ReactionHandler = (keyOrMxc: string, shortcode: string) => void;
 
@@ -655,6 +657,8 @@ export type MessageProps = {
   room: Room;
   mEvent: MatrixEvent;
   collapse: boolean;
+  collapseNext?: boolean;
+  hideSenderMeta?: boolean;
   highlight: boolean;
   edit?: boolean;
   canDelete?: boolean;
@@ -691,6 +695,8 @@ export const Message = as<'div', MessageProps>(
       room,
       mEvent,
       collapse,
+      collapseNext,
+      hideSenderMeta,
       highlight,
       edit,
       canDelete,
@@ -725,6 +731,7 @@ export const Message = as<'div', MessageProps>(
     const useAuthentication = useMediaAuthentication();
     const senderId = mEvent.getSender() ?? '';
     const canHover = useCanHover();
+    const [telegramStyleChat] = useTelegramStyleChatSetting();
 
     const [hover, setHover] = useState(false);
     const { hoverProps } = useHover({ onHoverChange: setHover, isDisabled: !canHover });
@@ -751,6 +758,38 @@ export const Message = as<'div', MessageProps>(
       if (!canHover) setHover(false);
     }, [canHover]);
 
+    const showBubbleTimeInContent = telegramStyleChat && messageLayout === MessageLayout.Bubble;
+    const renderBotActionsOutsideBubble = telegramStyleChat && messageLayout === MessageLayout.Bubble;
+    const showTelegramBubbleHeader = telegramStyleChat && messageLayout === MessageLayout.Bubble;
+    const isTelegramBubble = telegramStyleChat && messageLayout === MessageLayout.Bubble;
+    const isLastInTelegramGroup = !collapseNext;
+    const isOwnMessage = senderId === mx.getUserId();
+    const bubbleTailMode = isTelegramBubble
+      ? !isLastInTelegramGroup || actions
+        ? 'none'
+        : 'bottom'
+      : 'top';
+    const senderJSX = (
+      <Box alignItems="Center" gap="200">
+        <Username
+          as="button"
+          style={{ color: usernameColor }}
+          data-user-id={senderId}
+          onContextMenu={onUserClick}
+          onClick={onUsernameClick}
+          {...touchUsernameContextMenuProps}
+        >
+          <Text
+            as="span"
+            size={messageLayout === MessageLayout.Bubble ? 'T300' : 'T400'}
+            truncate
+          >
+            <UsernameBold>{senderDisplayName}</UsernameBold>
+          </Text>
+        </Username>
+        {tagIconSrc && <PowerIcon size="100" iconSrc={tagIconSrc} />}
+      </Box>
+    );
     const headerJSX = !collapse && (
       <Box
         gap="300"
@@ -759,50 +798,35 @@ export const Message = as<'div', MessageProps>(
         alignItems="Baseline"
         grow="Yes"
       >
-        <Box alignItems="Center" gap="200">
-          <Username
-            as="button"
-            style={{ color: usernameColor }}
-            data-user-id={senderId}
-            onContextMenu={onUserClick}
-            onClick={onUsernameClick}
-            {...touchUsernameContextMenuProps}
-          >
-            <Text
-              as="span"
-              size={messageLayout === MessageLayout.Bubble ? 'T300' : 'T400'}
-              truncate
-            >
-              <UsernameBold>{senderDisplayName}</UsernameBold>
-            </Text>
-          </Username>
-          {tagIconSrc && <PowerIcon size="100" iconSrc={tagIconSrc} />}
-        </Box>
-        <Box shrink="No" gap="100">
-          {messageLayout === MessageLayout.Modern && hover && (
-            <>
-              <Text as="span" size="T200" priority="300">
-                {senderId}
-              </Text>
-              <Text as="span" size="T200" priority="300">
-                |
-              </Text>
-            </>
-          )}
-          <Time
-            ts={mEvent.getTs()}
-            compact={messageLayout === MessageLayout.Compact}
-            hour24Clock={hour24Clock}
-            dateFormatString={dateFormatString}
-          />
-        </Box>
+        {!showTelegramBubbleHeader && senderJSX}
+        {!showBubbleTimeInContent && (
+          <Box shrink="No" gap="100">
+            {messageLayout === MessageLayout.Modern && hover && (
+              <>
+                <Text as="span" size="T200" priority="300">
+                  {senderId}
+                </Text>
+                <Text as="span" size="T200" priority="300">
+                  |
+                </Text>
+              </>
+            )}
+            <Time
+              ts={mEvent.getTs()}
+              compact={messageLayout === MessageLayout.Compact}
+              hour24Clock={hour24Clock}
+              dateFormatString={dateFormatString}
+            />
+          </Box>
+        )}
       </Box>
     );
 
-    const avatarJSX = !collapse && messageLayout !== MessageLayout.Compact && (
-      <AvatarBase
-        className={messageLayout === MessageLayout.Bubble ? css.BubbleAvatarBase : undefined}
-      >
+    const showAvatar =
+      messageLayout !== MessageLayout.Compact &&
+      (showTelegramBubbleHeader ? !isOwnMessage && !hideSenderMeta && isLastInTelegramGroup : !collapse);
+    const avatarJSX = showAvatar && (
+      <AvatarBase className={showTelegramBubbleHeader ? css.BubbleAvatarBase : undefined}>
         <Avatar
           className={css.MessageAvatar}
           as="button"
@@ -826,6 +850,16 @@ export const Message = as<'div', MessageProps>(
 
     const msgContentJSX = (
       <Box direction="Column" alignSelf="Start" style={{ maxWidth: '100%' }}>
+        {showTelegramBubbleHeader && !hideSenderMeta && !collapse && (
+          <Box
+            style={{
+              marginTop: toRem(-4),
+              marginBottom: toRem(1),
+            }}
+          >
+            {senderJSX}
+          </Box>
+        )}
         {reply}
         {edit && onEditId ? (
           <MessageEditor
@@ -842,8 +876,19 @@ export const Message = as<'div', MessageProps>(
         ) : (
           children
         )}
-        {actions}
+        {!renderBotActionsOutsideBubble && actions}
         {reactions}
+        {showBubbleTimeInContent && (
+          <Box as="span" alignSelf="End" style={{ marginTop: config.space.S100 }}>
+            <Time
+              ts={mEvent.getTs()}
+              compact
+              hour24Clock={hour24Clock}
+              dateFormatString={dateFormatString}
+              style={{ fontSize: '0.65em', lineHeight: 1 }}
+            />
+          </Box>
+        )}
       </Box>
     );
 
@@ -1126,14 +1171,36 @@ export const Message = as<'div', MessageProps>(
           </CompactLayout>
         )}
         {messageLayout === MessageLayout.Bubble && (
-          <BubbleLayout
-            before={avatarJSX}
-            header={headerJSX}
-            onContextMenu={handleContextMenu}
-            {...touchContextMenuProps}
-          >
-            {msgContentJSX}
-          </BubbleLayout>
+          <>
+            <BubbleLayout
+              before={avatarJSX}
+              header={showTelegramBubbleHeader ? undefined : headerJSX}
+              tail={bubbleTailMode}
+              tailSide={isTelegramBubble && isOwnMessage ? 'right' : 'left'}
+              contentAlign={isTelegramBubble && isOwnMessage ? 'end' : 'start'}
+              contentClassName={
+                telegramStyleChat
+                  ? classNames(css.TelegramBubbleContent, isOwnMessage && css.TelegramBubbleOwn)
+                  : undefined
+              }
+              bubbleVariant={isTelegramBubble && isOwnMessage ? 'Primary' : 'SurfaceVariant'}
+              textVariant="SurfaceVariant"
+              onContextMenu={handleContextMenu}
+              {...touchContextMenuProps}
+            >
+              {msgContentJSX}
+            </BubbleLayout>
+            {renderBotActionsOutsideBubble && actions && (
+              <Box
+                style={{
+                  marginTop: config.space.S50,
+                  marginLeft: hideSenderMeta ? toRem(8) : toRem(48),
+                }}
+              >
+                {actions}
+              </Box>
+            )}
+          </>
         )}
         {messageLayout !== MessageLayout.Compact && messageLayout !== MessageLayout.Bubble && (
           <ModernLayout before={avatarJSX} onContextMenu={handleContextMenu} {...touchContextMenuProps}>

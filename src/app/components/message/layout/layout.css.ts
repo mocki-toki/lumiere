@@ -142,6 +142,11 @@ export const BubbleBefore = style({
   minWidth: toRem(36),
 });
 
+export const BubbleBeforeHidden = style({
+  minWidth: 0,
+  width: 0,
+});
+
 export const BubbleContent = style({
   maxWidth: toRem(800),
   padding: config.space.S200,
@@ -151,18 +156,59 @@ export const BubbleContent = style({
   position: 'relative',
 });
 
-export const BubbleContentArrowLeft = style({
+export const BubbleContentArrowLeftTop = style({
   borderTopLeftRadius: 0,
+});
+
+export const BubbleContentArrowLeftBottom = style({
+  borderBottomLeftRadius: 0,
+});
+
+export const BubbleContentArrowRightTop = style({
+  borderTopRightRadius: 0,
+});
+
+export const BubbleContentArrowRightBottom = style({
+  borderBottomRightRadius: 0,
 });
 
 export const BubbleLeftArrow = style({
   width: toRem(9),
   height: toRem(8),
-
   position: 'absolute',
-  top: 0,
   left: toRem(-8),
   zIndex: 1,
+});
+
+export const BubbleContentTailOffset = style({
+  marginLeft: toRem(8),
+});
+
+export const BubbleLeftArrowTop = style({
+  top: 0,
+});
+
+export const BubbleLeftArrowBottom = style({
+  bottom: 0,
+  transform: 'scaleY(-1)',
+  transformOrigin: 'center',
+});
+
+export const BubbleRightArrow = style({
+  left: 'auto',
+  right: toRem(-8),
+  transform: 'scaleX(-1)',
+  transformOrigin: 'center',
+});
+
+export const BubbleRightArrowTop = style({
+  top: 0,
+});
+
+export const BubbleRightArrowBottom = style({
+  bottom: 0,
+  transform: 'scaleX(-1) scaleY(-1)',
+  transformOrigin: 'center',
 });
 
 export const Username = style({
