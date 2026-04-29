@@ -1,5 +1,6 @@
 import { style } from '@vanilla-extract/css';
 import { DefaultReset, color, config, toRem } from 'folds';
+import { canHoverMediaQuery } from '../../styles/media';
 
 export const UrlPreview = style([
   DefaultReset,
@@ -24,9 +25,12 @@ export const UrlPreviewImg = style([
     flexShrink: 0,
     overflow: 'hidden',
     cursor: 'pointer',
-
-    ':hover': {
-      filter: 'brightness(0.8)',
+    '@media': {
+      [canHoverMediaQuery]: {
+        ':hover': {
+          filter: 'brightness(0.8)',
+        },
+      },
     },
   },
 ]);

@@ -1,5 +1,6 @@
 import { style } from '@vanilla-extract/css';
 import { color, config, toRem } from 'folds';
+import { canHoverMediaQuery } from '../../styles/media';
 
 export const UserHeader = style({
   position: 'absolute',
@@ -46,9 +47,13 @@ export const UserHeroAvatar = style({
   },
 });
 export const UserHeroAvatarImg = style({
-  selectors: {
-    [`button${UserHeroAvatar}:hover &`]: {
-      filter: 'brightness(0.5)',
+  '@media': {
+    [canHoverMediaQuery]: {
+      selectors: {
+        [`button${UserHeroAvatar}:hover &`]: {
+          filter: 'brightness(0.5)',
+        },
+      },
     },
   },
 });

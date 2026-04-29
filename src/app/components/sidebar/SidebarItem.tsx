@@ -2,6 +2,7 @@ import classNames from 'classnames';
 import { as, Avatar, Text, Tooltip, TooltipProvider, toRem } from 'folds';
 import React, { ComponentProps, ReactNode, RefCallback } from 'react';
 import * as css from './Sidebar.css';
+import { useCanHover } from '../../hooks/useCanHover';
 
 export const SidebarItem = as<'div', css.SidebarItemVariants>(
   ({ as: AsSidebarAvatarBox = 'div', className, active, ...props }, ref) => (
@@ -30,7 +31,9 @@ export function SidebarItemTooltip({
   tooltip?: ReactNode | string;
   children: (triggerRef: RefCallback<HTMLElement | SVGElement>) => ReactNode;
 }) {
-  if (!tooltip) {
+  const canHover = useCanHover();
+
+  if (!tooltip || !canHover) {
     return children(() => undefined);
   }
 

@@ -93,6 +93,7 @@ import { useOpenSpaceSettings } from '../../../state/hooks/spaceSettings';
 import { useRoomCreators } from '../../../hooks/useRoomCreators';
 import { useRoomPermissions } from '../../../hooks/useRoomPermissions';
 import { InviteUserPrompt } from '../../../components/invite-user-prompt';
+import { useTouchLongPressContextMenu } from '../../../hooks/useTouchLongPressContextMenu';
 
 type SpaceMenuProps = {
   room: Room;
@@ -445,6 +446,7 @@ function SpaceTab({
   const dropType = dropState?.type;
 
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
+  const touchContextMenuProps = useTouchLongPressContextMenu<HTMLButtonElement>();
 
   const handleContextMenu: MouseEventHandler<HTMLButtonElement> = (evt) => {
     evt.preventDefault();
@@ -459,7 +461,8 @@ function SpaceTab({
     <RoomUnreadProvider roomId={space.roomId}>
       {(unread) => (
         <SidebarItem
-          active={selected}
+          active={selected || !!menuAnchor}
+          data-menu-open={!!menuAnchor}
           ref={targetRef}
           aria-disabled={disabled}
           data-drop-child={dropType === 'make-child'}
@@ -476,6 +479,7 @@ function SpaceTab({
                 size={folder ? '300' : '400'}
                 onClick={onClick}
                 onContextMenu={handleContextMenu}
+                {...touchContextMenuProps}
               >
                 <RoomAvatar
                   roomId={space.roomId}

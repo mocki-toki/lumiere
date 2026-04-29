@@ -1,6 +1,7 @@
 import { style } from '@vanilla-extract/css';
 import { recipe } from '@vanilla-extract/recipes';
 import { DefaultReset, color, config, toRem } from 'folds';
+import { canHoverMediaQuery } from '../../styles/media';
 
 export const RoomViewFollowingPlaceholder = style([
   DefaultReset,
@@ -26,11 +27,20 @@ export const RoomViewFollowing = recipe({
       true: {
         cursor: 'pointer',
         selectors: {
-          '&:hover, &:focus-visible': {
+          '&:focus-visible': {
             color: color.Primary.Main,
           },
           '&:active': {
             color: color.Primary.Main,
+          },
+        },
+        '@media': {
+          [canHoverMediaQuery]: {
+            selectors: {
+              '&:hover': {
+                color: color.Primary.Main,
+              },
+            },
           },
         },
       },

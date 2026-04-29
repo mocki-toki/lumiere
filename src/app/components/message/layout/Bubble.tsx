@@ -5,11 +5,12 @@ import * as css from './layout.css';
 
 type BubbleArrowProps = {
   variant: ContainerColor;
+  className?: string;
 };
-function BubbleLeftArrow({ variant }: BubbleArrowProps) {
+function BubbleLeftArrow({ variant, className }: BubbleArrowProps) {
   return (
     <svg
-      className={css.BubbleLeftArrow}
+      className={classNames(css.BubbleLeftArrow, className)}
       width="9"
       height="8"
       viewBox="0 0 9 8"
@@ -30,12 +31,33 @@ type BubbleLayoutProps = {
   hideBubble?: boolean;
   before?: ReactNode;
   header?: ReactNode;
+  tail?: 'top' | 'bottom' | 'none';
+  tailSide?: 'left' | 'right';
+  contentClassName?: string;
+  contentAlign?: 'start' | 'end';
+  bubbleVariant?: ContainerColor;
+  textVariant?: ContainerColor;
 };
 
 export const BubbleLayout = as<'div', BubbleLayoutProps>(
-  ({ hideBubble, before, header, children, ...props }, ref) => (
-    <Box gap="300" {...props} ref={ref}>
-      <Box className={css.BubbleBefore} shrink="No">
+  (
+    {
+      hideBubble,
+      before,
+      header,
+      tail = 'top',
+      tailSide = 'left',
+      contentClassName,
+      contentAlign = 'start',
+      bubbleVariant = 'SurfaceVariant',
+      textVariant,
+      children,
+      ...props
+    },
+    ref
+  ) => (
+    <Box gap={before ? '300' : '0'} {...props} ref={ref}>
+      <Box className={classNames(css.BubbleBefore, !before && css.BubbleBeforeHidden)} shrink="No">
         {before}
       </Box>
       <Box grow="Yes" direction="Column">
@@ -43,16 +65,46 @@ export const BubbleLayout = as<'div', BubbleLayoutProps>(
         {hideBubble ? (
           children
         ) : (
-          <Box>
+          <Box justifyContent={contentAlign === 'end' ? 'End' : 'Start'}>
             <Box
               className={
                 hideBubble
                   ? undefined
-                  : classNames(css.BubbleContent, before ? css.BubbleContentArrowLeft : undefined)
+                  : classNames(
+                      css.BubbleContent,
+                      contentClassName,
+                      tailSide === 'left' && tail === 'top' ? css.BubbleContentArrowLeftTop : undefined,
+                      tailSide === 'left' && tail === 'bottom'
+                        ? css.BubbleContentArrowLeftBottom
+                        : undefined,
+                      tailSide === 'right' && tail === 'top'
+                        ? css.BubbleContentArrowRightTop
+                        : undefined,
+                      tailSide === 'right' && tail === 'bottom'
+                        ? css.BubbleContentArrowRightBottom
+                        : undefined
+                    )
               }
+              style={{
+                backgroundColor: color[bubbleVariant].Container,
+                color: color[textVariant ?? bubbleVariant].OnContainer,
+              }}
               direction="Column"
             >
-              {before ? <BubbleLeftArrow variant="SurfaceVariant" /> : null}
+              {tail !== 'none' ? (
+                <BubbleLeftArrow
+                  variant={bubbleVariant}
+                  className={classNames(
+                    tailSide === 'right' ? css.BubbleRightArrow : undefined,
+                    tailSide === 'right' && tail === 'bottom'
+                      ? css.BubbleRightArrowBottom
+                      : undefined,
+                    tailSide === 'right' && tail === 'top' ? css.BubbleRightArrowTop : undefined,
+                    tailSide === 'left' && tail === 'bottom' ? css.BubbleLeftArrowBottom : undefined,
+                    tailSide === 'left' && tail === 'top' ? css.BubbleLeftArrowTop : undefined
+                  )}
+                />
+              ) : null}
               {children}
             </Box>
           </Box>

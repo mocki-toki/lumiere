@@ -26,6 +26,18 @@ export const MessageOptionsBar = style([
 
 export const BubbleAvatarBase = style({
   paddingTop: 0,
+  alignSelf: 'end',
+});
+
+export const TelegramBubbleContent = style({
+  maxWidth: toRem(400),
+  marginLeft: toRem(8),
+});
+
+export const TelegramBubbleOwn = style({
+  alignSelf: 'end',
+  marginLeft: 0,
+  marginRight: toRem(8),
 });
 
 export const MessageAvatar = style({

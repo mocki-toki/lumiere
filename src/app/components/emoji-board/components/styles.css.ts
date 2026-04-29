@@ -1,5 +1,6 @@
 import { style } from '@vanilla-extract/css';
 import { toRem, color, config, DefaultReset, FocusOutline } from 'folds';
+import { canHoverMediaQuery } from '../../../styles/media';
 
 /**
  * Layout
@@ -127,9 +128,12 @@ export const EmojiItem = style([
     lineHeight: toRem(32),
     borderRadius: config.radii.R400,
     cursor: 'pointer',
-
-    ':hover': {
-      backgroundColor: color.Surface.ContainerHover,
+    '@media': {
+      [canHoverMediaQuery]: {
+        ':hover': {
+          backgroundColor: color.Surface.ContainerHover,
+        },
+      },
     },
   },
 ]);

@@ -29,6 +29,7 @@ import { useSetting } from '../../../state/hooks/settings';
 import { settingsAtom } from '../../../state/settings';
 import { useDirectSelected } from '../../../hooks/router/useDirectSelected';
 import { useAlternativeSidebarSetting } from '../../../features/settings/lumiere-settings/store';
+import { useTouchLongPressContextMenu } from '../../../hooks/useTouchLongPressContextMenu';
 
 type HomeMenuProps = {
   includeDirect: boolean;
@@ -107,6 +108,7 @@ export function HomeTab() {
     : homeUnread;
   const hasMergedUnread = !!mergedUnread && (mergedUnread.total > 0 || mergedUnread.highlight > 0);
   const mergedSelected = alternativeSidebar ? homeSelected || directSelected : homeSelected;
+  const touchContextMenuProps = useTouchLongPressContextMenu<HTMLButtonElement>();
 
   const handleHomeClick = () => {
     const activePath = navToActivePath.get('home');
@@ -128,7 +130,7 @@ export function HomeTab() {
   };
 
   return (
-    <SidebarItem active={mergedSelected}>
+    <SidebarItem active={mergedSelected || !!menuAnchor} data-menu-open={!!menuAnchor}>
       <SidebarItemTooltip tooltip={alternativeSidebar ? 'Home & Direct Messages' : 'Home'}>
         {(triggerRef) => (
           <SidebarAvatar
@@ -137,6 +139,7 @@ export function HomeTab() {
             outlined
             onClick={handleHomeClick}
             onContextMenu={handleContextMenu}
+            {...touchContextMenuProps}
           >
             <Icon src={Icons.Home} filled={mergedSelected} />
           </SidebarAvatar>

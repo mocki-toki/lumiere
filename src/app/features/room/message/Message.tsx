@@ -22,12 +22,14 @@ import {
   as,
   color,
   config,
+  toRem,
 } from 'folds';
 import React, {
   FormEventHandler,
   MouseEventHandler,
   ReactNode,
   useCallback,
+  useEffect,
   useState,
 } from 'react';
 import FocusTrap from 'focus-trap-react';
@@ -77,6 +79,9 @@ import { MemberPowerTag, StateEvent } from '../../../../types/matrix/room';
 import { PowerIcon } from '../../../components/power';
 import colorMXID from '../../../../util/colorMXID';
 import { getPowerTagIconSrc } from '../../../hooks/useMemberPowerTag';
+import { useCanHover } from '../../../hooks/useCanHover';
+import { useTouchLongPressContextMenu } from '../../../hooks/useTouchLongPressContextMenu';
+import { useTelegramStyleChatSetting } from '../../settings/lumiere-settings/store';
 
 export type ReactionHandler = (keyOrMxc: string, shortcode: string) => void;
 
@@ -652,6 +657,8 @@ export type MessageProps = {
   room: Room;
   mEvent: MatrixEvent;
   collapse: boolean;
+  collapseNext?: boolean;
+  hideSenderMeta?: boolean;
   highlight: boolean;
   edit?: boolean;
   canDelete?: boolean;
@@ -674,6 +681,7 @@ export type MessageProps = {
   reactions?: ReactNode;
   hideReadReceipts?: boolean;
   showDeveloperTools?: boolean;
+  disableMessageOptionsBar?: boolean;
   memberPowerTag?: MemberPowerTag;
   accessibleTagColors?: Map<string, string>;
   legacyUsernameColor?: boolean;
@@ -687,6 +695,8 @@ export const Message = as<'div', MessageProps>(
       room,
       mEvent,
       collapse,
+      collapseNext,
+      hideSenderMeta,
       highlight,
       edit,
       canDelete,
@@ -706,6 +716,7 @@ export const Message = as<'div', MessageProps>(
       reactions,
       hideReadReceipts,
       showDeveloperTools,
+      disableMessageOptionsBar,
       memberPowerTag,
       accessibleTagColors,
       legacyUsernameColor,
@@ -719,10 +730,14 @@ export const Message = as<'div', MessageProps>(
     const mx = useMatrixClient();
     const useAuthentication = useMediaAuthentication();
     const senderId = mEvent.getSender() ?? '';
+    const canHover = useCanHover();
+    const [telegramStyleChat] = useTelegramStyleChatSetting();
 
     const [hover, setHover] = useState(false);
-    const { hoverProps } = useHover({ onHoverChange: setHover });
+    const { hoverProps } = useHover({ onHoverChange: setHover, isDisabled: !canHover });
     const { focusWithinProps } = useFocusWithin({ onFocusWithinChange: setHover });
+    const touchContextMenuProps = useTouchLongPressContextMenu<HTMLDivElement>();
+    const touchUsernameContextMenuProps = useTouchLongPressContextMenu<HTMLButtonElement>();
     const [menuAnchor, setMenuAnchor] = useState<RectCords>();
     const [emojiBoardAnchor, setEmojiBoardAnchor] = useState<RectCords>();
 
@@ -739,6 +754,42 @@ export const Message = as<'div', MessageProps>(
 
     const usernameColor = legacyUsernameColor ? colorMXID(senderId) : tagColor;
 
+    useEffect(() => {
+      if (!canHover) setHover(false);
+    }, [canHover]);
+
+    const showBubbleTimeInContent = telegramStyleChat && messageLayout === MessageLayout.Bubble;
+    const renderBotActionsOutsideBubble = telegramStyleChat && messageLayout === MessageLayout.Bubble;
+    const showTelegramBubbleHeader = telegramStyleChat && messageLayout === MessageLayout.Bubble;
+    const isTelegramBubble = telegramStyleChat && messageLayout === MessageLayout.Bubble;
+    const isLastInTelegramGroup = !collapseNext;
+    const isOwnMessage = senderId === mx.getUserId();
+    const bubbleTailMode = isTelegramBubble
+      ? !isLastInTelegramGroup || actions
+        ? 'none'
+        : 'bottom'
+      : 'top';
+    const senderJSX = (
+      <Box alignItems="Center" gap="200">
+        <Username
+          as="button"
+          style={{ color: usernameColor }}
+          data-user-id={senderId}
+          onContextMenu={onUserClick}
+          onClick={onUsernameClick}
+          {...touchUsernameContextMenuProps}
+        >
+          <Text
+            as="span"
+            size={messageLayout === MessageLayout.Bubble ? 'T300' : 'T400'}
+            truncate
+          >
+            <UsernameBold>{senderDisplayName}</UsernameBold>
+          </Text>
+        </Username>
+        {tagIconSrc && <PowerIcon size="100" iconSrc={tagIconSrc} />}
+      </Box>
+    );
     const headerJSX = !collapse && (
       <Box
         gap="300"
@@ -747,49 +798,35 @@ export const Message = as<'div', MessageProps>(
         alignItems="Baseline"
         grow="Yes"
       >
-        <Box alignItems="Center" gap="200">
-          <Username
-            as="button"
-            style={{ color: usernameColor }}
-            data-user-id={senderId}
-            onContextMenu={onUserClick}
-            onClick={onUsernameClick}
-          >
-            <Text
-              as="span"
-              size={messageLayout === MessageLayout.Bubble ? 'T300' : 'T400'}
-              truncate
-            >
-              <UsernameBold>{senderDisplayName}</UsernameBold>
-            </Text>
-          </Username>
-          {tagIconSrc && <PowerIcon size="100" iconSrc={tagIconSrc} />}
-        </Box>
-        <Box shrink="No" gap="100">
-          {messageLayout === MessageLayout.Modern && hover && (
-            <>
-              <Text as="span" size="T200" priority="300">
-                {senderId}
-              </Text>
-              <Text as="span" size="T200" priority="300">
-                |
-              </Text>
-            </>
-          )}
-          <Time
-            ts={mEvent.getTs()}
-            compact={messageLayout === MessageLayout.Compact}
-            hour24Clock={hour24Clock}
-            dateFormatString={dateFormatString}
-          />
-        </Box>
+        {!showTelegramBubbleHeader && senderJSX}
+        {!showBubbleTimeInContent && (
+          <Box shrink="No" gap="100">
+            {messageLayout === MessageLayout.Modern && hover && (
+              <>
+                <Text as="span" size="T200" priority="300">
+                  {senderId}
+                </Text>
+                <Text as="span" size="T200" priority="300">
+                  |
+                </Text>
+              </>
+            )}
+            <Time
+              ts={mEvent.getTs()}
+              compact={messageLayout === MessageLayout.Compact}
+              hour24Clock={hour24Clock}
+              dateFormatString={dateFormatString}
+            />
+          </Box>
+        )}
       </Box>
     );
 
-    const avatarJSX = !collapse && messageLayout !== MessageLayout.Compact && (
-      <AvatarBase
-        className={messageLayout === MessageLayout.Bubble ? css.BubbleAvatarBase : undefined}
-      >
+    const showAvatar =
+      messageLayout !== MessageLayout.Compact &&
+      (showTelegramBubbleHeader ? !isOwnMessage && !hideSenderMeta && isLastInTelegramGroup : !collapse);
+    const avatarJSX = showAvatar && (
+      <AvatarBase className={showTelegramBubbleHeader ? css.BubbleAvatarBase : undefined}>
         <Avatar
           className={css.MessageAvatar}
           as="button"
@@ -813,6 +850,16 @@ export const Message = as<'div', MessageProps>(
 
     const msgContentJSX = (
       <Box direction="Column" alignSelf="Start" style={{ maxWidth: '100%' }}>
+        {showTelegramBubbleHeader && !hideSenderMeta && !collapse && (
+          <Box
+            style={{
+              marginTop: toRem(-4),
+              marginBottom: toRem(1),
+            }}
+          >
+            {senderJSX}
+          </Box>
+        )}
         {reply}
         {edit && onEditId ? (
           <MessageEditor
@@ -829,8 +876,19 @@ export const Message = as<'div', MessageProps>(
         ) : (
           children
         )}
-        {actions}
+        {!renderBotActionsOutsideBubble && actions}
         {reactions}
+        {showBubbleTimeInContent && (
+          <Box as="span" alignSelf="End" style={{ marginTop: config.space.S100 }}>
+            <Time
+              ts={mEvent.getTs()}
+              compact
+              hour24Clock={hour24Clock}
+              dateFormatString={dateFormatString}
+              style={{ fontSize: '0.65em', lineHeight: 1 }}
+            />
+          </Box>
+        )}
       </Box>
     );
 
@@ -872,6 +930,133 @@ export const Message = as<'div', MessageProps>(
     };
 
     const isThreadedMessage = mEvent.threadRootId !== undefined;
+    const showMessageOptionsBar =
+      !disableMessageOptionsBar && !edit && (hover || !!menuAnchor || !!emojiBoardAnchor);
+    const emojiBoardContent = (
+      <EmojiBoard
+        imagePackRooms={imagePackRooms ?? []}
+        returnFocusOnDeactivate={false}
+        allowTextCustomEmoji
+        onEmojiSelect={(key) => {
+          onReactionToggle(mEvent.getId()!, key);
+          setEmojiBoardAnchor(undefined);
+        }}
+        onCustomEmojiSelect={(mxc, shortcode) => {
+          onReactionToggle(mEvent.getId()!, mxc, shortcode);
+          setEmojiBoardAnchor(undefined);
+        }}
+        requestClose={() => {
+          setEmojiBoardAnchor(undefined);
+        }}
+      />
+    );
+    const messageMenuContent = (
+      <FocusTrap
+        focusTrapOptions={{
+          initialFocus: false,
+          onDeactivate: () => setMenuAnchor(undefined),
+          clickOutsideDeactivates: true,
+          isKeyForward: (evt: KeyboardEvent) => evt.key === 'ArrowDown',
+          isKeyBackward: (evt: KeyboardEvent) => evt.key === 'ArrowUp',
+          escapeDeactivates: stopPropagation,
+        }}
+      >
+        <Menu>
+          {canSendReaction && (
+            <MessageQuickReactions
+              onReaction={(key, shortcode) => {
+                onReactionToggle(mEvent.getId()!, key, shortcode);
+                closeMenu();
+              }}
+            />
+          )}
+          <Box direction="Column" gap="100" className={css.MessageMenuGroup}>
+            {canSendReaction && (
+              <MenuItem
+                size="300"
+                after={<Icon size="100" src={Icons.SmilePlus} />}
+                radii="300"
+                onClick={handleAddReactions}
+              >
+                <Text className={css.MessageMenuItemText} as="span" size="T300" truncate>
+                  Add Reaction
+                </Text>
+              </MenuItem>
+            )}
+            {relations && (
+              <MessageAllReactionItem room={room} relations={relations} onClose={closeMenu} />
+            )}
+            <MenuItem
+              size="300"
+              after={<Icon size="100" src={Icons.ReplyArrow} />}
+              radii="300"
+              data-event-id={mEvent.getId()}
+              onClick={(evt: any) => {
+                onReplyClick(evt);
+                closeMenu();
+              }}
+            >
+              <Text className={css.MessageMenuItemText} as="span" size="T300" truncate>
+                Reply
+              </Text>
+            </MenuItem>
+            {!isThreadedMessage && (
+              <MenuItem
+                size="300"
+                after={<Icon src={Icons.ThreadPlus} size="100" />}
+                radii="300"
+                data-event-id={mEvent.getId()}
+                onClick={(evt: any) => {
+                  onReplyClick(evt, true);
+                  closeMenu();
+                }}
+              >
+                <Text className={css.MessageMenuItemText} as="span" size="T300" truncate>
+                  Reply in Thread
+                </Text>
+              </MenuItem>
+            )}
+            {canEditEvent(mx, mEvent) && onEditId && (
+              <MenuItem
+                size="300"
+                after={<Icon size="100" src={Icons.Pencil} />}
+                radii="300"
+                data-event-id={mEvent.getId()}
+                onClick={() => {
+                  onEditId(mEvent.getId());
+                  closeMenu();
+                }}
+              >
+                <Text className={css.MessageMenuItemText} as="span" size="T300" truncate>
+                  Edit Message
+                </Text>
+              </MenuItem>
+            )}
+            {!hideReadReceipts && (
+              <MessageReadReceiptItem room={room} eventId={mEvent.getId() ?? ''} onClose={closeMenu} />
+            )}
+            {showDeveloperTools && (
+              <MessageSourceCodeItem room={room} mEvent={mEvent} onClose={closeMenu} />
+            )}
+            <MessageCopyLinkItem room={room} mEvent={mEvent} onClose={closeMenu} />
+            {canPinEvent && <MessagePinItem room={room} mEvent={mEvent} onClose={closeMenu} />}
+          </Box>
+          {((!mEvent.isRedacted() && canDelete) || mEvent.getSender() !== mx.getUserId()) && (
+            <>
+              <Line size="300" />
+              <Box direction="Column" gap="100" className={css.MessageMenuGroup}>
+                {!mEvent.isRedacted() && canDelete && (
+                  <MessageDeleteItem room={room} mEvent={mEvent} onClose={closeMenu} />
+                )}
+                {mEvent.getSender() !== mx.getUserId() && (
+                  <MessageReportItem room={room} mEvent={mEvent} onClose={closeMenu} />
+                )}
+              </Box>
+            </>
+          )}
+        </Menu>
+      </FocusTrap>
+    );
 
     return (
       <MessageBase
@@ -888,7 +1073,25 @@ export const Message = as<'div', MessageProps>(
         {...focusWithinProps}
         ref={ref}
       >
-        {!edit && (hover || !!menuAnchor || !!emojiBoardAnchor) && (
+        {disableMessageOptionsBar && canSendReaction && (
+          <PopOut
+            position="Bottom"
+            align={emojiBoardAnchor?.width === 0 ? 'Start' : 'End'}
+            offset={emojiBoardAnchor?.width === 0 ? 0 : undefined}
+            anchor={emojiBoardAnchor}
+            content={emojiBoardContent}
+          />
+        )}
+        {disableMessageOptionsBar && menuAnchor && (
+          <PopOut
+            anchor={menuAnchor}
+            position="Bottom"
+            align={menuAnchor?.width === 0 ? 'Start' : 'End'}
+            offset={menuAnchor?.width === 0 ? 0 : undefined}
+            content={messageMenuContent}
+          />
+        )}
+        {showMessageOptionsBar && (
           <div className={css.MessageOptionsBase}>
             <Menu className={css.MessageOptionsBar} variant="SurfaceVariant">
               <Box gap="100">
@@ -898,24 +1101,7 @@ export const Message = as<'div', MessageProps>(
                     align={emojiBoardAnchor?.width === 0 ? 'Start' : 'End'}
                     offset={emojiBoardAnchor?.width === 0 ? 0 : undefined}
                     anchor={emojiBoardAnchor}
-                    content={
-                      <EmojiBoard
-                        imagePackRooms={imagePackRooms ?? []}
-                        returnFocusOnDeactivate={false}
-                        allowTextCustomEmoji
-                        onEmojiSelect={(key) => {
-                          onReactionToggle(mEvent.getId()!, key);
-                          setEmojiBoardAnchor(undefined);
-                        }}
-                        onCustomEmojiSelect={(mxc, shortcode) => {
-                          onReactionToggle(mEvent.getId()!, mxc, shortcode);
-                          setEmojiBoardAnchor(undefined);
-                        }}
-                        requestClose={() => {
-                          setEmojiBoardAnchor(undefined);
-                        }}
-                      />
-                    }
+                    content={emojiBoardContent}
                   >
                     <IconButton
                       onClick={handleOpenEmojiBoard}
@@ -963,156 +1149,7 @@ export const Message = as<'div', MessageProps>(
                   position="Bottom"
                   align={menuAnchor?.width === 0 ? 'Start' : 'End'}
                   offset={menuAnchor?.width === 0 ? 0 : undefined}
-                  content={
-                    <FocusTrap
-                      focusTrapOptions={{
-                        initialFocus: false,
-                        onDeactivate: () => setMenuAnchor(undefined),
-                        clickOutsideDeactivates: true,
-                        isKeyForward: (evt: KeyboardEvent) => evt.key === 'ArrowDown',
-                        isKeyBackward: (evt: KeyboardEvent) => evt.key === 'ArrowUp',
-                        escapeDeactivates: stopPropagation,
-                      }}
-                    >
-                      <Menu>
-                        {canSendReaction && (
-                          <MessageQuickReactions
-                            onReaction={(key, shortcode) => {
-                              onReactionToggle(mEvent.getId()!, key, shortcode);
-                              closeMenu();
-                            }}
-                          />
-                        )}
-                        <Box direction="Column" gap="100" className={css.MessageMenuGroup}>
-                          {canSendReaction && (
-                            <MenuItem
-                              size="300"
-                              after={<Icon size="100" src={Icons.SmilePlus} />}
-                              radii="300"
-                              onClick={handleAddReactions}
-                            >
-                              <Text
-                                className={css.MessageMenuItemText}
-                                as="span"
-                                size="T300"
-                                truncate
-                              >
-                                Add Reaction
-                              </Text>
-                            </MenuItem>
-                          )}
-                          {relations && (
-                            <MessageAllReactionItem
-                              room={room}
-                              relations={relations}
-                              onClose={closeMenu}
-                            />
-                          )}
-                          <MenuItem
-                            size="300"
-                            after={<Icon size="100" src={Icons.ReplyArrow} />}
-                            radii="300"
-                            data-event-id={mEvent.getId()}
-                            onClick={(evt: any) => {
-                              onReplyClick(evt);
-                              closeMenu();
-                            }}
-                          >
-                            <Text
-                              className={css.MessageMenuItemText}
-                              as="span"
-                              size="T300"
-                              truncate
-                            >
-                              Reply
-                            </Text>
-                          </MenuItem>
-                          {!isThreadedMessage && (
-                            <MenuItem
-                              size="300"
-                              after={<Icon src={Icons.ThreadPlus} size="100" />}
-                              radii="300"
-                              data-event-id={mEvent.getId()}
-                              onClick={(evt: any) => {
-                                onReplyClick(evt, true);
-                                closeMenu();
-                              }}
-                            >
-                              <Text
-                                className={css.MessageMenuItemText}
-                                as="span"
-                                size="T300"
-                                truncate
-                              >
-                                Reply in Thread
-                              </Text>
-                            </MenuItem>
-                          )}
-                          {canEditEvent(mx, mEvent) && onEditId && (
-                            <MenuItem
-                              size="300"
-                              after={<Icon size="100" src={Icons.Pencil} />}
-                              radii="300"
-                              data-event-id={mEvent.getId()}
-                              onClick={() => {
-                                onEditId(mEvent.getId());
-                                closeMenu();
-                              }}
-                            >
-                              <Text
-                                className={css.MessageMenuItemText}
-                                as="span"
-                                size="T300"
-                                truncate
-                              >
-                                Edit Message
-                              </Text>
-                            </MenuItem>
-                          )}
-                          {!hideReadReceipts && (
-                            <MessageReadReceiptItem
-                              room={room}
-                              eventId={mEvent.getId() ?? ''}
-                              onClose={closeMenu}
-                            />
-                          )}
-                          {showDeveloperTools && (
-                            <MessageSourceCodeItem
-                              room={room}
-                              mEvent={mEvent}
-                              onClose={closeMenu}
-                            />
-                          )}
-                          <MessageCopyLinkItem room={room} mEvent={mEvent} onClose={closeMenu} />
-                          {canPinEvent && (
-                            <MessagePinItem room={room} mEvent={mEvent} onClose={closeMenu} />
-                          )}
-                        </Box>
-                        {((!mEvent.isRedacted() && canDelete) ||
-                          mEvent.getSender() !== mx.getUserId()) && (
-                          <>
-                            <Line size="300" />
-                            <Box direction="Column" gap="100" className={css.MessageMenuGroup}>
-                              {!mEvent.isRedacted() && canDelete && (
-                                <MessageDeleteItem
-                                  room={room}
-                                  mEvent={mEvent}
-                                  onClose={closeMenu}
-                                />
-                              )}
-                              {mEvent.getSender() !== mx.getUserId() && (
-                                <MessageReportItem
-                                  room={room}
-                                  mEvent={mEvent}
-                                  onClose={closeMenu}
-                                />
-                              )}
-                            </Box>
-                          </>
-                        )}
-                      </Menu>
-                    </FocusTrap>
-                  }
+                  content={messageMenuContent}
                 >
                   <IconButton
                     variant="SurfaceVariant"
@@ -1129,17 +1166,44 @@ export const Message = as<'div', MessageProps>(
           </div>
         )}
         {messageLayout === MessageLayout.Compact && (
-          <CompactLayout before={headerJSX} onContextMenu={handleContextMenu}>
+          <CompactLayout before={headerJSX} onContextMenu={handleContextMenu} {...touchContextMenuProps}>
             {msgContentJSX}
           </CompactLayout>
         )}
         {messageLayout === MessageLayout.Bubble && (
-          <BubbleLayout before={avatarJSX} header={headerJSX} onContextMenu={handleContextMenu}>
-            {msgContentJSX}
-          </BubbleLayout>
+          <>
+            <BubbleLayout
+              before={avatarJSX}
+              header={showTelegramBubbleHeader ? undefined : headerJSX}
+              tail={bubbleTailMode}
+              tailSide={isTelegramBubble && isOwnMessage ? 'right' : 'left'}
+              contentAlign={isTelegramBubble && isOwnMessage ? 'end' : 'start'}
+              contentClassName={
+                telegramStyleChat
+                  ? classNames(css.TelegramBubbleContent, isOwnMessage && css.TelegramBubbleOwn)
+                  : undefined
+              }
+              bubbleVariant={isTelegramBubble && isOwnMessage ? 'Primary' : 'SurfaceVariant'}
+              textVariant="SurfaceVariant"
+              onContextMenu={handleContextMenu}
+              {...touchContextMenuProps}
+            >
+              {msgContentJSX}
+            </BubbleLayout>
+            {renderBotActionsOutsideBubble && actions && (
+              <Box
+                style={{
+                  marginTop: config.space.S50,
+                  marginLeft: hideSenderMeta ? toRem(8) : toRem(48),
+                }}
+              >
+                {actions}
+              </Box>
+            )}
+          </>
         )}
         {messageLayout !== MessageLayout.Compact && messageLayout !== MessageLayout.Bubble && (
-          <ModernLayout before={avatarJSX} onContextMenu={handleContextMenu}>
+          <ModernLayout before={avatarJSX} onContextMenu={handleContextMenu} {...touchContextMenuProps}>
             {headerJSX}
             {msgContentJSX}
           </ModernLayout>
@@ -1157,6 +1221,7 @@ export type EventProps = {
   messageSpacing: MessageSpacing;
   hideReadReceipts?: boolean;
   showDeveloperTools?: boolean;
+  disableMessageOptionsBar?: boolean;
 };
 export const Event = as<'div', EventProps>(
   (
@@ -1169,15 +1234,18 @@ export const Event = as<'div', EventProps>(
       messageSpacing,
       hideReadReceipts,
       showDeveloperTools,
+      disableMessageOptionsBar,
       children,
       ...props
     },
     ref
   ) => {
     const mx = useMatrixClient();
+    const canHover = useCanHover();
     const [hover, setHover] = useState(false);
-    const { hoverProps } = useHover({ onHoverChange: setHover });
+    const { hoverProps } = useHover({ onHoverChange: setHover, isDisabled: !canHover });
     const { focusWithinProps } = useFocusWithin({ onFocusWithinChange: setHover });
+    const touchContextMenuProps = useTouchLongPressContextMenu<HTMLDivElement>();
     const [menuAnchor, setMenuAnchor] = useState<RectCords>();
     const stateEvent = typeof mEvent.getStateKey() === 'string';
 
@@ -1203,6 +1271,50 @@ export const Event = as<'div', EventProps>(
       setMenuAnchor(undefined);
     };
 
+    useEffect(() => {
+      if (!canHover) setHover(false);
+    }, [canHover]);
+
+    const showMessageOptionsBar = !disableMessageOptionsBar && (hover || !!menuAnchor);
+    const eventMenuContent = (
+      <FocusTrap
+        focusTrapOptions={{
+          initialFocus: false,
+          onDeactivate: () => setMenuAnchor(undefined),
+          clickOutsideDeactivates: true,
+          isKeyForward: (evt: KeyboardEvent) => evt.key === 'ArrowDown',
+          isKeyBackward: (evt: KeyboardEvent) => evt.key === 'ArrowUp',
+          escapeDeactivates: stopPropagation,
+        }}
+      >
+        <Menu {...props} ref={ref}>
+          <Box direction="Column" gap="100" className={css.MessageMenuGroup}>
+            {!hideReadReceipts && (
+              <MessageReadReceiptItem room={room} eventId={mEvent.getId() ?? ''} onClose={closeMenu} />
+            )}
+            {showDeveloperTools && (
+              <MessageSourceCodeItem room={room} mEvent={mEvent} onClose={closeMenu} />
+            )}
+            <MessageCopyLinkItem room={room} mEvent={mEvent} onClose={closeMenu} />
+          </Box>
+          {((!mEvent.isRedacted() && canDelete && !stateEvent) ||
+            (mEvent.getSender() !== mx.getUserId() && !stateEvent)) && (
+            <>
+              <Line size="300" />
+              <Box direction="Column" gap="100" className={css.MessageMenuGroup}>
+                {!mEvent.isRedacted() && canDelete && (
+                  <MessageDeleteItem room={room} mEvent={mEvent} onClose={closeMenu} />
+                )}
+                {mEvent.getSender() !== mx.getUserId() && (
+                  <MessageReportItem room={room} mEvent={mEvent} onClose={closeMenu} />
+                )}
+              </Box>
+            </>
+          )}
+        </Menu>
+      </FocusTrap>
+    );
+
     return (
       <MessageBase
         className={classNames(css.MessageBase, className)}
@@ -1216,7 +1328,16 @@ export const Event = as<'div', EventProps>(
         {...focusWithinProps}
         ref={ref}
       >
-        {(hover || !!menuAnchor) && (
+        {disableMessageOptionsBar && menuAnchor && (
+          <PopOut
+            anchor={menuAnchor}
+            position="Bottom"
+            align={menuAnchor?.width === 0 ? 'Start' : 'End'}
+            offset={menuAnchor?.width === 0 ? 0 : undefined}
+            content={eventMenuContent}
+          />
+        )}
+        {showMessageOptionsBar && (
           <div className={css.MessageOptionsBase}>
             <Menu className={css.MessageOptionsBar} variant="SurfaceVariant">
               <Box gap="100">
@@ -1225,60 +1346,7 @@ export const Event = as<'div', EventProps>(
                   position="Bottom"
                   align={menuAnchor?.width === 0 ? 'Start' : 'End'}
                   offset={menuAnchor?.width === 0 ? 0 : undefined}
-                  content={
-                    <FocusTrap
-                      focusTrapOptions={{
-                        initialFocus: false,
-                        onDeactivate: () => setMenuAnchor(undefined),
-                        clickOutsideDeactivates: true,
-                        isKeyForward: (evt: KeyboardEvent) => evt.key === 'ArrowDown',
-                        isKeyBackward: (evt: KeyboardEvent) => evt.key === 'ArrowUp',
-                        escapeDeactivates: stopPropagation,
-                      }}
-                    >
-                      <Menu {...props} ref={ref}>
-                        <Box direction="Column" gap="100" className={css.MessageMenuGroup}>
-                          {!hideReadReceipts && (
-                            <MessageReadReceiptItem
-                              room={room}
-                              eventId={mEvent.getId() ?? ''}
-                              onClose={closeMenu}
-                            />
-                          )}
-                          {showDeveloperTools && (
-                            <MessageSourceCodeItem
-                              room={room}
-                              mEvent={mEvent}
-                              onClose={closeMenu}
-                            />
-                          )}
-                          <MessageCopyLinkItem room={room} mEvent={mEvent} onClose={closeMenu} />
-                        </Box>
-                        {((!mEvent.isRedacted() && canDelete && !stateEvent) ||
-                          (mEvent.getSender() !== mx.getUserId() && !stateEvent)) && (
-                          <>
-                            <Line size="300" />
-                            <Box direction="Column" gap="100" className={css.MessageMenuGroup}>
-                              {!mEvent.isRedacted() && canDelete && (
-                                <MessageDeleteItem
-                                  room={room}
-                                  mEvent={mEvent}
-                                  onClose={closeMenu}
-                                />
-                              )}
-                              {mEvent.getSender() !== mx.getUserId() && (
-                                <MessageReportItem
-                                  room={room}
-                                  mEvent={mEvent}
-                                  onClose={closeMenu}
-                                />
-                              )}
-                            </Box>
-                          </>
-                        )}
-                      </Menu>
-                    </FocusTrap>
-                  }
+                  content={eventMenuContent}
                 >
                   <IconButton
                     variant="SurfaceVariant"
@@ -1294,7 +1362,9 @@ export const Event = as<'div', EventProps>(
             </Menu>
           </div>
         )}
-        <div onContextMenu={handleContextMenu}>{children}</div>
+        <div onContextMenu={handleContextMenu} {...touchContextMenuProps}>
+          {children}
+        </div>
       </MessageBase>
     );
   }

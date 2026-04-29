@@ -23,6 +23,7 @@ import * as css from './styles.css';
 import { ReactionViewer } from '../reaction-viewer';
 import { stopPropagation } from '../../../utils/keyboard';
 import { useMediaAuthentication } from '../../../hooks/useMediaAuthentication';
+import { useTouchLongPressContextMenu } from '../../../hooks/useTouchLongPressContextMenu';
 
 export type ReactionsProps = {
   room: Room;
@@ -36,6 +37,7 @@ export const Reactions = as<'div', ReactionsProps>(
     const mx = useMatrixClient();
     const useAuthentication = useMediaAuthentication();
     const [viewer, setViewer] = useState<boolean | string>(false);
+    const touchContextMenuProps = useTouchLongPressContextMenu<HTMLButtonElement>();
     const myUserId = mx.getUserId();
     const reactions = useRelations(
       relations,
@@ -87,6 +89,7 @@ export const Reactions = as<'div', ReactionsProps>(
                   count={events.size}
                   onClick={canSendReaction ? () => onReactionToggle(mEventId, key) : undefined}
                   onContextMenu={handleViewReaction}
+                  {...touchContextMenuProps}
                   aria-disabled={!canSendReaction}
                   useAuthentication={useAuthentication}
                 />

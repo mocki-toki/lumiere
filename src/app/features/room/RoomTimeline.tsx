@@ -132,6 +132,10 @@ import { useAccessiblePowerTagColors, useGetMemberPowerTag } from '../../hooks/u
 import { useTheme } from '../../hooks/useTheme';
 import { useRoomCreatorsTag } from '../../hooks/useRoomCreatorsTag';
 import { usePowerLevelTags } from '../../hooks/usePowerLevelTags';
+import {
+  useDisableMessageOptionsBarSetting,
+  useTelegramStyleChatSetting,
+} from '../settings/lumiere-settings/store';
 
 const TimelineFloat = as<'div', css.TimelineFloatVariants>(
   ({ position, className, ...props }, ref) => (
@@ -465,8 +469,13 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
-  const [messageLayout] = useSetting(settingsAtom, 'messageLayout');
-  const [messageSpacing] = useSetting(settingsAtom, 'messageSpacing');
+  const [storedMessageLayout] = useSetting(settingsAtom, 'messageLayout');
+  const [storedMessageSpacing] = useSetting(settingsAtom, 'messageSpacing');
+  const [telegramStyleChat] = useTelegramStyleChatSetting();
+  const messageLayout = telegramStyleChat ? MessageLayout.Bubble : storedMessageLayout;
+  const messageSpacing = telegramStyleChat ? '400' : storedMessageSpacing;
+  const otherJoinedMembersCount = Math.max(room.getJoinedMemberCount() - 1, 0);
+  const hideTelegramSenderMeta = telegramStyleChat && otherJoinedMembersCount < 2;
   const [legacyUsernameColor] = useSetting(settingsAtom, 'legacyUsernameColor');
   const direct = useIsDirectRoom();
   const [hideMembershipEvents] = useSetting(settingsAtom, 'hideMembershipEvents');
@@ -477,6 +486,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
   const showUrlPreview = room.hasEncryptionStateEvent() ? encUrlPreview : urlPreview;
   const [showHiddenEvents] = useSetting(settingsAtom, 'showHiddenEvents');
   const [showDeveloperTools] = useSetting(settingsAtom, 'developerTools');
+  const [disableMessageOptionsBar] = useDisableMessageOptionsBarSetting();
 
   const [hour24Clock] = useSetting(settingsAtom, 'hour24Clock');
   const [dateFormatString] = useSetting(settingsAtom, 'dateFormatString');
@@ -1137,7 +1147,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
         (max, row) => Math.max(max, ...row.map((button) => button.label.length)),
         0
       );
-      const buttonWidthCh = Math.max(maxLabelLength, 1);
+      const buttonWidthCh = Math.max(maxLabelLength - 2, 1);
       const lockKey = getBotActionLockKey(targetEventId, getBotMessageSignature(content));
       const disabled = pendingBotActions.has(lockKey) || !canSendBotCallback;
       const rowOccurrences = new Map<string, number>();
@@ -1173,9 +1183,12 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
                       size="400"
                       disabled={disabled}
                       onClick={() => handleBotAction(targetEventId, callbackData, lockKey)}
-                      style={{ minWidth: `${buttonWidthCh}ch` }}
+                      style={{
+                        minWidth: `${buttonWidthCh}ch`,
+                        paddingInline: toRem(6),
+                      }}
                     >
-                      <Text as="span" size="B300" style={{ width: '100%', textAlign: 'center' }}>
+                      <Text as="span" size="B400" style={{ width: '100%', textAlign: 'center' }}>
                         {label}
                       </Text>
                     </Chip>
@@ -1192,10 +1205,10 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
   const { t } = useTranslation();
 
   const renderMatrixEvent = useMatrixEventRenderer<
-    [string, MatrixEvent, number, EventTimelineSet, boolean]
+    [string, MatrixEvent, number, EventTimelineSet, boolean, boolean]
   >(
     {
-      [MessageEvent.RoomMessage]: (mEventId, mEvent, item, timelineSet, collapse) => {
+      [MessageEvent.RoomMessage]: (mEventId, mEvent, item, timelineSet, collapse, collapseNext) => {
         const reactionRelations = getEventReactions(timelineSet, mEventId);
         const reactions = reactionRelations && reactionRelations.getSortedAnnotationsByKey();
         const hasReactions = reactions && reactions.length > 0;
@@ -1220,6 +1233,8 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             messageSpacing={messageSpacing}
             messageLayout={messageLayout}
             collapse={collapse}
+            collapseNext={collapseNext}
+            hideSenderMeta={hideTelegramSenderMeta}
             highlight={highlighted}
             edit={editId === mEventId}
             canDelete={canRedact || (canDeleteOwn && mEvent.getSender() === mx.getUserId())}
@@ -1261,6 +1276,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             actions={renderBotActions(mEventId, getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
             memberPowerTag={getMemberPowerTag(senderId)}
             accessibleTagColors={accessiblePowerTagColors}
             legacyUsernameColor={legacyUsernameColor || direct}
@@ -1286,7 +1302,14 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
           </Message>
         );
       },
-      [MessageEvent.RoomMessageEncrypted]: (mEventId, mEvent, item, timelineSet, collapse) => {
+      [MessageEvent.RoomMessageEncrypted]: (
+        mEventId,
+        mEvent,
+        item,
+        timelineSet,
+        collapse,
+        collapseNext
+      ) => {
         const reactionRelations = getEventReactions(timelineSet, mEventId);
         const reactions = reactionRelations && reactionRelations.getSortedAnnotationsByKey();
         const hasReactions = reactions && reactions.length > 0;
@@ -1303,6 +1326,8 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             messageSpacing={messageSpacing}
             messageLayout={messageLayout}
             collapse={collapse}
+            collapseNext={collapseNext}
+            hideSenderMeta={hideTelegramSenderMeta}
             highlight={highlighted}
             edit={editId === mEventId}
             canDelete={canRedact || (canDeleteOwn && mEvent.getSender() === mx.getUserId())}
@@ -1344,6 +1369,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             actions={renderBotActions(mEventId, mEvent.getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
             memberPowerTag={getMemberPowerTag(mEvent.getSender() ?? '')}
             accessibleTagColors={accessiblePowerTagColors}
             legacyUsernameColor={legacyUsernameColor || direct}
@@ -1407,7 +1433,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
           </Message>
         );
       },
-      [MessageEvent.Sticker]: (mEventId, mEvent, item, timelineSet, collapse) => {
+      [MessageEvent.Sticker]: (mEventId, mEvent, item, timelineSet, collapse, collapseNext) => {
         const reactionRelations = getEventReactions(timelineSet, mEventId);
         const reactions = reactionRelations && reactionRelations.getSortedAnnotationsByKey();
         const hasReactions = reactions && reactions.length > 0;
@@ -1423,6 +1449,8 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             messageSpacing={messageSpacing}
             messageLayout={messageLayout}
             collapse={collapse}
+            collapseNext={collapseNext}
+            hideSenderMeta={hideTelegramSenderMeta}
             highlight={highlighted}
             canDelete={canRedact || (canDeleteOwn && mEvent.getSender() === mx.getUserId())}
             canSendReaction={canSendReaction}
@@ -1448,6 +1476,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             actions={renderBotActions(mEventId, mEvent.getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
             memberPowerTag={getMemberPowerTag(mEvent.getSender() ?? '')}
             accessibleTagColors={accessiblePowerTagColors}
             legacyUsernameColor={legacyUsernameColor || direct}
@@ -1501,6 +1530,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
           >
             <EventContent
               messageLayout={messageLayout}
@@ -1543,6 +1573,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
           >
             <EventContent
               messageLayout={messageLayout}
@@ -1586,6 +1617,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
           >
             <EventContent
               messageLayout={messageLayout}
@@ -1629,6 +1661,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
           >
             <EventContent
               messageLayout={messageLayout}
@@ -1680,6 +1713,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
           >
             <EventContent
               messageLayout={messageLayout}
@@ -1725,6 +1759,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
           canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
           hideReadReceipts={hideActivity}
           showDeveloperTools={showDeveloperTools}
+          disableMessageOptionsBar={disableMessageOptionsBar}
         >
           <EventContent
             messageLayout={messageLayout}
@@ -1775,6 +1810,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
           canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
           hideReadReceipts={hideActivity}
           showDeveloperTools={showDeveloperTools}
+          disableMessageOptionsBar={disableMessageOptionsBar}
         >
           <EventContent
             messageLayout={messageLayout}
@@ -1800,6 +1836,24 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
   let isPrevRendered = false;
   let newDivider = false;
   let dayDivider = false;
+  const getRenderedEventAt = (targetItem: number): MatrixEvent | undefined => {
+    for (let i = targetItem; i < eventsLength; i += 1) {
+      const [targetTimeline, targetBaseIndex] = getTimelineAndBaseIndex(timeline.linkedTimelines, i);
+      if (!targetTimeline) return undefined;
+
+      const targetEvent = getTimelineEvent(targetTimeline, getTimelineRelativeIndex(i, targetBaseIndex));
+      const targetEventId = targetEvent?.getId();
+      if (!targetEvent || !targetEventId) continue;
+
+      const targetSender = targetEvent.getSender();
+      if (targetSender && ignoredUsersSet.has(targetSender)) continue;
+      if (targetEvent.isRedacted() && !showHiddenEvents) continue;
+      if (reactionOrEditEvent(targetEvent)) continue;
+
+      return targetEvent;
+    }
+    return undefined;
+  };
   const eventRenderer = (item: number) => {
     const [eventTimeline, baseIndex] = getTimelineAndBaseIndex(timeline.linkedTimelines, item);
     if (!eventTimeline) return null;
@@ -1832,6 +1886,13 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
       prevEvent.getSender() === eventSender &&
       prevEvent.getType() === mEvent.getType() &&
       minuteDifference(prevEvent.getTs(), mEvent.getTs()) < 2;
+    const nextEvent = getRenderedEventAt(item + 1);
+    const collapseNext =
+      !!nextEvent &&
+      inSameDay(mEvent.getTs(), nextEvent.getTs()) &&
+      nextEvent.getSender() === eventSender &&
+      nextEvent.getType() === mEvent.getType() &&
+      minuteDifference(mEvent.getTs(), nextEvent.getTs()) < 2;
 
     const eventJSX = reactionOrEditEvent(mEvent)
       ? null
@@ -1842,7 +1903,8 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
           mEvent,
           item,
           timelineSet,
-          collapsed
+          collapsed,
+          collapseNext
         );
     prevEvent = mEvent;
     isPrevRendered = !!eventJSX;

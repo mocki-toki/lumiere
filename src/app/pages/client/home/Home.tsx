@@ -269,6 +269,8 @@ function HomeHeader({
   onSearchClick: () => void;
 }) {
   const screenSize = useScreenSizeContext();
+  const desktopNonCompactAlternative =
+    alternativeSidebar && screenSize === ScreenSize.Desktop && !compactChats;
   let logoMarginLeft = '7px';
   let logoMarginRight = '7px';
   if (screenSize === ScreenSize.Mobile) {
@@ -302,6 +304,16 @@ function HomeHeader({
     else if (screenSize === ScreenSize.Tablet) mobileTitleTextOffset = compactChats ? '1px' : '2px';
     else if (screenSize === ScreenSize.Desktop) mobileTitleTextOffset = compactChats ? '1px' : '2px';
   }
+  let resolvedLogoMarginLeft: string = compactChats ? compactLogoMarginLeft : logoMarginLeft;
+  let resolvedLogoMarginRight: string = compactChats ? compactLogoMarginRight : logoMarginRight;
+  if (desktopNonCompactAlternative) {
+    resolvedLogoMarginLeft = '0px';
+    resolvedLogoMarginRight = '0px';
+  }
+  const alternativeHeaderAvatarColumnWidth = toRem(43);
+  const titleGroupStyle = desktopNonCompactAlternative
+    ? { marginLeft: config.space.S100 }
+    : { marginLeft: mobileTitleGroupOffset };
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
   const [settings, setSettings] = useState(false);
 
@@ -318,25 +330,49 @@ function HomeHeader({
       <PageNavHeader>
         <Box alignItems="Center" grow="Yes" gap="300">
           <Box grow="Yes">
-            <Box alignItems="Center" gap="300" style={{ marginLeft: mobileTitleGroupOffset }}>
+            <Box alignItems="Center" gap="300" style={titleGroupStyle}>
               {alternativeSidebar && (
-                <img
-                  src={LogoSVG}
-                  alt="Lumiere"
-                  style={{
-                    width: toRem(24),
-                    height: toRem(24),
-                    marginLeft: compactChats ? compactLogoMarginLeft : logoMarginLeft,
-                    marginRight: compactChats ? compactLogoMarginRight : logoMarginRight,
-                  }}
-                />
+                desktopNonCompactAlternative ? (
+                  <Box
+                    as="span"
+                    alignItems="Center"
+                    justifyContent="Center"
+                    style={{
+                      width: alternativeHeaderAvatarColumnWidth,
+                      minWidth: alternativeHeaderAvatarColumnWidth,
+                    }}
+                  >
+                    <img
+                      src={LogoSVG}
+                      alt="Lumiere"
+                      style={{
+                        width: toRem(24),
+                        height: toRem(24),
+                      }}
+                    />
+                  </Box>
+                ) : (
+                  <img
+                    src={LogoSVG}
+                    alt="Lumiere"
+                    style={{
+                      width: toRem(24),
+                      height: toRem(24),
+                      marginLeft: resolvedLogoMarginLeft,
+                      marginRight: resolvedLogoMarginRight,
+                    }}
+                  />
+                )
               )}
               <Text
                 size="H4"
                 truncate
                 style={
                   alternativeSidebar
-                    ? { fontWeight: 500, marginLeft: mobileTitleTextOffset }
+                    ? {
+                        fontWeight: 500,
+                        marginLeft: desktopNonCompactAlternative ? undefined : mobileTitleTextOffset,
+                      }
                     : undefined
                 }
               >
@@ -982,6 +1018,11 @@ export function Home() {
                     const selected = selectedRoomId === roomId;
                     const isDirect = alternativeSidebar && mDirects.has(roomId);
                     const isSpace = alternativeSidebar && room.getType() === 'm.space';
+                    const canonicalRoomId = getCanonicalAliasOrRoomId(mx, roomId);
+                    let linkPath = getHomeRoomPath(canonicalRoomId);
+                    if (isSpace) {
+                      linkPath = mobile ? getSpacePath(canonicalRoomId) : getSpaceLobbyPath(canonicalRoomId);
+                    }
                     const previewSourceRoom = isSpace
                       ? getSpaceChildren(room)
                           .map((childId) => mx.getRoom(childId))
@@ -1011,13 +1052,7 @@ export function Home() {
                           alternativeSidebarLayout={alternativeSidebar}
                           roundAvatars={roundAvatars}
                           previewSourceRoom={previewSourceRoom}
-                          linkPath={
-                            isSpace
-                              ? mobile
-                                ? getSpacePath(getCanonicalAliasOrRoomId(mx, roomId))
-                                : getSpaceLobbyPath(getCanonicalAliasOrRoomId(mx, roomId))
-                              : getHomeRoomPath(getCanonicalAliasOrRoomId(mx, roomId))
-                          }
+                          linkPath={linkPath}
                           notificationMode={getRoomNotificationMode(
                             notificationPreferences,
                             room.roomId

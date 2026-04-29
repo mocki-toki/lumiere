@@ -1,6 +1,7 @@
 import { style } from '@vanilla-extract/css';
 import { recipe, RecipeVariants } from '@vanilla-extract/recipes';
 import { DefaultReset, color, config, toRem } from 'folds';
+import { canHoverMediaQuery } from '../../styles/media';
 
 export const PageNav = recipe({
   variants: {
@@ -33,11 +34,20 @@ export const PageNavHeader = recipe({
       'button&[aria-pressed=true]': {
         backgroundColor: color.Background.ContainerActive,
       },
-      'button&:hover, button&:focus-visible': {
+      'button&:focus-visible': {
         backgroundColor: color.Background.ContainerHover,
       },
       'button&:active': {
         backgroundColor: color.Background.ContainerActive,
+      },
+    },
+    '@media': {
+      [canHoverMediaQuery]: {
+        selectors: {
+          'button&:hover': {
+            backgroundColor: color.Background.ContainerHover,
+          },
+        },
       },
     },
   },

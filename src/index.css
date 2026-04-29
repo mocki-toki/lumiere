@@ -46,6 +46,27 @@ html {
 @media (max-width: 750px) {
   html {
     font-size: 17px;
+    overscroll-behavior: none;
+  }
+
+  body,
+  #root,
+  #root * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  body {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  #root {
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 }
 
@@ -78,8 +99,39 @@ a {
   color: var(--tc-link);
   text-decoration: none;
 }
-a:hover {
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  a:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (any-pointer: coarse) {
+  [data-touch-context-menu='true'],
+  [data-touch-context-menu='true'] * {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  [data-touch-context-menu='true'] a {
+    -webkit-touch-callout: none;
+  }
+
+  a:hover,
+  a:focus-visible,
+  button:focus-visible {
+    text-decoration: none !important;
+  }
+
+  button:hover,
+  [role='button']:hover {
+    background-color: inherit !important;
+    transform: none !important;
+    filter: none !important;
+    text-decoration: none !important;
+  }
 }
 
 [data-mx-spoiler][aria-pressed='true'] a {

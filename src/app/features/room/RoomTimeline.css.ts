@@ -45,13 +45,13 @@ export const BotActionButton = style({
   boxSizing: 'border-box',
   width: 'auto',
   minHeight: toRem(44),
-  paddingInline: config.space.S500,
+  paddingInline: config.space.S300,
   justifyContent: 'center',
   textAlign: 'center',
   '@media': {
     'screen and (min-width: 768px)': {
       minHeight: toRem(40),
-      paddingInline: config.space.S400,
+      paddingInline: config.space.S200,
     },
   },
 });

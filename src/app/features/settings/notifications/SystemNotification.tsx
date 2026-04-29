@@ -140,7 +140,7 @@ export function SystemNotification() {
                 {deniedDescription}
               </Text>
             ) : (
-              <span>Show desktop notifications when message arrive.</span>
+              <span>Show notifications when message arrive.</span>
             )
           }
           after={
