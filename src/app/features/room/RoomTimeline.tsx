@@ -132,6 +132,7 @@ import { useAccessiblePowerTagColors, useGetMemberPowerTag } from '../../hooks/u
 import { useTheme } from '../../hooks/useTheme';
 import { useRoomCreatorsTag } from '../../hooks/useRoomCreatorsTag';
 import { usePowerLevelTags } from '../../hooks/usePowerLevelTags';
+import { useDisableMessageOptionsBarSetting } from '../settings/lumiere-settings/store';
 
 const TimelineFloat = as<'div', css.TimelineFloatVariants>(
   ({ position, className, ...props }, ref) => (
@@ -477,6 +478,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
   const showUrlPreview = room.hasEncryptionStateEvent() ? encUrlPreview : urlPreview;
   const [showHiddenEvents] = useSetting(settingsAtom, 'showHiddenEvents');
   const [showDeveloperTools] = useSetting(settingsAtom, 'developerTools');
+  const [disableMessageOptionsBar] = useDisableMessageOptionsBarSetting();
 
   const [hour24Clock] = useSetting(settingsAtom, 'hour24Clock');
   const [dateFormatString] = useSetting(settingsAtom, 'dateFormatString');
@@ -1261,6 +1263,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             actions={renderBotActions(mEventId, getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
             memberPowerTag={getMemberPowerTag(senderId)}
             accessibleTagColors={accessiblePowerTagColors}
             legacyUsernameColor={legacyUsernameColor || direct}
@@ -1344,6 +1347,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             actions={renderBotActions(mEventId, mEvent.getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
             memberPowerTag={getMemberPowerTag(mEvent.getSender() ?? '')}
             accessibleTagColors={accessiblePowerTagColors}
             legacyUsernameColor={legacyUsernameColor || direct}
@@ -1448,6 +1452,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             actions={renderBotActions(mEventId, mEvent.getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
             memberPowerTag={getMemberPowerTag(mEvent.getSender() ?? '')}
             accessibleTagColors={accessiblePowerTagColors}
             legacyUsernameColor={legacyUsernameColor || direct}
@@ -1501,6 +1506,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
           >
             <EventContent
               messageLayout={messageLayout}
@@ -1543,6 +1549,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
           >
             <EventContent
               messageLayout={messageLayout}
@@ -1586,6 +1593,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
           >
             <EventContent
               messageLayout={messageLayout}
@@ -1629,6 +1637,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
           >
             <EventContent
               messageLayout={messageLayout}
@@ -1680,6 +1689,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
+            disableMessageOptionsBar={disableMessageOptionsBar}
           >
             <EventContent
               messageLayout={messageLayout}
@@ -1725,6 +1735,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
           canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
           hideReadReceipts={hideActivity}
           showDeveloperTools={showDeveloperTools}
+          disableMessageOptionsBar={disableMessageOptionsBar}
         >
           <EventContent
             messageLayout={messageLayout}
@@ -1775,6 +1786,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
           canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
           hideReadReceipts={hideActivity}
           showDeveloperTools={showDeveloperTools}
+          disableMessageOptionsBar={disableMessageOptionsBar}
         >
           <EventContent
             messageLayout={messageLayout}

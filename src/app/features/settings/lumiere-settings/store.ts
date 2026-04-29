@@ -7,6 +7,7 @@ type LumiereSettingsStore = {
   alternativeSidebar: boolean;
   showLastMessage: boolean;
   compactChats: boolean;
+  disableMessageOptionsBar: boolean;
   roundAvatars: boolean;
   neverShowChangelog: boolean;
   changelogDismissedForVersion: string;
@@ -16,6 +17,7 @@ const defaultLumiereSettings: LumiereSettingsStore = {
   alternativeSidebar: true,
   showLastMessage: true,
   compactChats: false,
+  disableMessageOptionsBar: true,
   roundAvatars: true,
   neverShowChangelog: false,
   changelogDismissedForVersion: '',
@@ -128,6 +130,36 @@ export const useCompactChatsSetting = (): [boolean, (value: boolean) => void] =>
   };
 
   return [compactChats, updateCompactChats];
+};
+
+export const useDisableMessageOptionsBarSetting = (): [boolean, (value: boolean) => void] => {
+  const [disableMessageOptionsBar, setDisableMessageOptionsBar] = useState<boolean>(
+    () => getLumiereSettings().disableMessageOptionsBar
+  );
+
+  useEffect(() => {
+    const syncSettings = () => {
+      setDisableMessageOptionsBar(getLumiereSettings().disableMessageOptionsBar);
+    };
+
+    window.addEventListener('storage', syncSettings);
+    window.addEventListener(LUMIERE_SETTINGS_CHANGE_EVENT, syncSettings);
+
+    return () => {
+      window.removeEventListener('storage', syncSettings);
+      window.removeEventListener(LUMIERE_SETTINGS_CHANGE_EVENT, syncSettings);
+    };
+  }, []);
+
+  const updateDisableMessageOptionsBar = (value: boolean) => {
+    setDisableMessageOptionsBar(value);
+    setLumiereSettings({
+      ...getLumiereSettings(),
+      disableMessageOptionsBar: value,
+    });
+  };
+
+  return [disableMessageOptionsBar, updateDisableMessageOptionsBar];
 };
 
 export const useRoundAvatarsSetting = (): [boolean, (value: boolean) => void] => {

@@ -9,6 +9,7 @@ import {
   useAlternativeSidebarSetting,
   useChangelogDismissedForVersionSetting,
   useCompactChatsSetting,
+  useDisableMessageOptionsBarSetting,
   useNeverShowChangelogSetting,
   useRoundAvatarsSetting,
   useShowLastMessageSetting,
@@ -31,6 +32,8 @@ export function LumiereSettings({ requestClose }: LumiereSettingsProps) {
   const [alternativeSidebar, setAlternativeSidebar] = useAlternativeSidebarSetting();
   const [showLastMessage, setShowLastMessage] = useShowLastMessageSetting();
   const [compactChats, setCompactChats] = useCompactChatsSetting();
+  const [disableMessageOptionsBar, setDisableMessageOptionsBar] =
+    useDisableMessageOptionsBarSetting();
   const [roundAvatars, setRoundAvatars] = useRoundAvatarsSetting();
   const [neverShowChangelog, setNeverShowChangelog] = useNeverShowChangelogSetting();
   const [, setChangelogDismissedForVersion] = useChangelogDismissedForVersionSetting();
@@ -120,6 +123,26 @@ export function LumiereSettings({ requestClose }: LumiereSettingsProps) {
                     title="Compact Chats"
                     description="Uses tighter chat rows with smaller avatars and spacing."
                     after={<Switch value={compactChats} onChange={setCompactChats} />}
+                  />
+                </SequenceCard>
+              </Box>
+              <Box direction="Column" gap="100">
+                <Text size="L400">Chat</Text>
+                <SequenceCard
+                  className={SequenceCardStyle}
+                  variant="SurfaceVariant"
+                  direction="Column"
+                  gap="400"
+                >
+                  <SettingTile
+                    title="Disable Message Action Bar"
+                    description="Hides the hover message action bar. Right-click context menu still works."
+                    after={
+                      <Switch
+                        value={disableMessageOptionsBar}
+                        onChange={setDisableMessageOptionsBar}
+                      />
+                    }
                   />
                 </SequenceCard>
               </Box>
