@@ -46,6 +46,7 @@ html {
 @media (max-width: 750px) {
   html {
     font-size: 17px;
+    overscroll-behavior: none;
   }
 
   body,
@@ -53,6 +54,19 @@ html {
   #root * {
     -webkit-user-select: none;
     user-select: none;
+  }
+
+  body {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  #root {
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 }
 
