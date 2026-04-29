@@ -3,6 +3,8 @@ A Matrix client fork based on Cinny, currently rebranded as Lumiere.
 - [Source Code](https://github.com/mocki-toki/lumiere)
 - [Contributing](./CONTRIBUTING.md)
 - [Fork Process Guide](./agents.md)
+- [Bot Matrix Buttons Spec (v1)](./docs/bot-matrix-buttons-v1.md)
+- [Bot Matrix Buttons E2E Checklist](./docs/bot-matrix-buttons-e2e-checklist.md)
 
 ## Getting started
 Run locally with the commands below.

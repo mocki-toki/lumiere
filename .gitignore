@@ -2,6 +2,7 @@ experiment
 dist
 node_modules
 devAssets
+PLAN.md
 
 .DS_Store
 .idea

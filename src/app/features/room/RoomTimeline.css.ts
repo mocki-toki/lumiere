@@ -1,5 +1,6 @@
+import { style } from '@vanilla-extract/css';
 import { RecipeVariants, recipe } from '@vanilla-extract/recipes';
-import { DefaultReset, config } from 'folds';
+import { DefaultReset, config, toRem } from 'folds';
 
 export const TimelineFloat = recipe({
   base: [
@@ -28,3 +29,29 @@ export const TimelineFloat = recipe({
 });
 
 export type TimelineFloatVariants = RecipeVariants<typeof TimelineFloat>;
+
+export const BotActionRows = style({
+  width: '100%',
+});
+
+export const BotActionRow = style({
+  display: 'grid',
+  width: 'max-content',
+  maxWidth: '100%',
+  gap: config.space.S200,
+});
+
+export const BotActionButton = style({
+  boxSizing: 'border-box',
+  width: 'auto',
+  minHeight: toRem(44),
+  paddingInline: config.space.S500,
+  justifyContent: 'center',
+  textAlign: 'center',
+  '@media': {
+    'screen and (min-width: 768px)': {
+      minHeight: toRem(40),
+      paddingInline: config.space.S400,
+    },
+  },
+});
