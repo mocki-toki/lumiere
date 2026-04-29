@@ -110,7 +110,7 @@ export function LumiereSettings({ requestClose }: LumiereSettingsProps) {
                   gap="400"
                 >
                   <SettingTile
-                    title="Alternative Variant (like Telegram)"
+                    title="Telegram Style"
                     description="Combines Home and Direct Messages, shows Spaces in the conversation list, and enables the floating create menu."
                     after={<Switch value={alternativeSidebar} onChange={setAlternativeSidebar} />}
                   />
