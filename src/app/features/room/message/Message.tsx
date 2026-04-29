@@ -79,6 +79,7 @@ import { PowerIcon } from '../../../components/power';
 import colorMXID from '../../../../util/colorMXID';
 import { getPowerTagIconSrc } from '../../../hooks/useMemberPowerTag';
 import { useCanHover } from '../../../hooks/useCanHover';
+import { useTouchLongPressContextMenu } from '../../../hooks/useTouchLongPressContextMenu';
 
 export type ReactionHandler = (keyOrMxc: string, shortcode: string) => void;
 
@@ -728,6 +729,8 @@ export const Message = as<'div', MessageProps>(
     const [hover, setHover] = useState(false);
     const { hoverProps } = useHover({ onHoverChange: setHover, isDisabled: !canHover });
     const { focusWithinProps } = useFocusWithin({ onFocusWithinChange: setHover });
+    const touchContextMenuProps = useTouchLongPressContextMenu<HTMLDivElement>();
+    const touchUsernameContextMenuProps = useTouchLongPressContextMenu<HTMLButtonElement>();
     const [menuAnchor, setMenuAnchor] = useState<RectCords>();
     const [emojiBoardAnchor, setEmojiBoardAnchor] = useState<RectCords>();
 
@@ -763,6 +766,7 @@ export const Message = as<'div', MessageProps>(
             data-user-id={senderId}
             onContextMenu={onUserClick}
             onClick={onUsernameClick}
+            {...touchUsernameContextMenuProps}
           >
             <Text
               as="span"
@@ -1117,17 +1121,22 @@ export const Message = as<'div', MessageProps>(
           </div>
         )}
         {messageLayout === MessageLayout.Compact && (
-          <CompactLayout before={headerJSX} onContextMenu={handleContextMenu}>
+          <CompactLayout before={headerJSX} onContextMenu={handleContextMenu} {...touchContextMenuProps}>
             {msgContentJSX}
           </CompactLayout>
         )}
         {messageLayout === MessageLayout.Bubble && (
-          <BubbleLayout before={avatarJSX} header={headerJSX} onContextMenu={handleContextMenu}>
+          <BubbleLayout
+            before={avatarJSX}
+            header={headerJSX}
+            onContextMenu={handleContextMenu}
+            {...touchContextMenuProps}
+          >
             {msgContentJSX}
           </BubbleLayout>
         )}
         {messageLayout !== MessageLayout.Compact && messageLayout !== MessageLayout.Bubble && (
-          <ModernLayout before={avatarJSX} onContextMenu={handleContextMenu}>
+          <ModernLayout before={avatarJSX} onContextMenu={handleContextMenu} {...touchContextMenuProps}>
             {headerJSX}
             {msgContentJSX}
           </ModernLayout>
@@ -1169,6 +1178,7 @@ export const Event = as<'div', EventProps>(
     const [hover, setHover] = useState(false);
     const { hoverProps } = useHover({ onHoverChange: setHover, isDisabled: !canHover });
     const { focusWithinProps } = useFocusWithin({ onFocusWithinChange: setHover });
+    const touchContextMenuProps = useTouchLongPressContextMenu<HTMLDivElement>();
     const [menuAnchor, setMenuAnchor] = useState<RectCords>();
     const stateEvent = typeof mEvent.getStateKey() === 'string';
 
@@ -1285,7 +1295,9 @@ export const Event = as<'div', EventProps>(
             </Menu>
           </div>
         )}
-        <div onContextMenu={handleContextMenu}>{children}</div>
+        <div onContextMenu={handleContextMenu} {...touchContextMenuProps}>
+          {children}
+        </div>
       </MessageBase>
     );
   }
