@@ -53,9 +53,7 @@ import {
   getMemberDisplayName,
 } from '../../../utils/room';
 import {
-  getCanonicalAliasOrRoomId,
   getMxIdLocalPart,
-  isRoomAlias,
   mxcUrlToHttp,
 } from '../../../utils/matrix';
 import { MessageLayout, MessageSpacing } from '../../../state/settings';
@@ -324,8 +322,6 @@ export const MessageCopyLinkItem = as<
     onClose?: () => void;
   }
 >(({ room, mEvent, onClose, ...props }, ref) => {
-  const mx = useMatrixClient();
-
   const handleCopy = () => {
     const eventId = mEvent.getId();
     if (!eventId) return;
@@ -674,6 +670,7 @@ export type MessageProps = {
   onEditId?: (eventId?: string) => void;
   onReactionToggle: (targetEventId: string, key: string, shortcode?: string) => void;
   reply?: ReactNode;
+  actions?: ReactNode;
   reactions?: ReactNode;
   hideReadReceipts?: boolean;
   showDeveloperTools?: boolean;
@@ -705,6 +702,7 @@ export const Message = as<'div', MessageProps>(
       onReactionToggle,
       onEditId,
       reply,
+      actions,
       reactions,
       hideReadReceipts,
       showDeveloperTools,
@@ -831,6 +829,7 @@ export const Message = as<'div', MessageProps>(
         ) : (
           children
         )}
+        {actions}
         {reactions}
       </Box>
     );

@@ -104,6 +104,11 @@ import { createMentionElement, isEmptyEditor, moveCursor } from '../../component
 import { roomIdToReplyDraftAtomFamily } from '../../state/room/roomInputDrafts';
 import { usePowerLevelsContext } from '../../hooks/usePowerLevels';
 import { GetContentCallback, MessageEvent, StateEvent } from '../../../types/matrix/room';
+import {
+  BOT_CALLBACK_EVENT,
+  BOT_REPLY_MARKUP_FIELD,
+  BotReplyMarkup,
+} from '../../../types/matrix/common';
 import { useKeyDown } from '../../hooks/useKeyDown';
 import { useDocumentFocusChange } from '../../hooks/useDocumentFocusChange';
 import { RenderMessageContent } from '../../components/RenderMessageContent';
@@ -150,6 +155,16 @@ const TimelineDivider = as<'div', { variant?: ContainerColor | 'Inherit' }>(
     </Box>
   )
 );
+
+const getBotReplyMarkup = (
+  content: Record<string, unknown>
+): BotReplyMarkup | undefined => {
+  const raw = content[BOT_REPLY_MARKUP_FIELD];
+  if (!raw || typeof raw !== 'object') return undefined;
+  const markup = raw as BotReplyMarkup;
+  if (!Array.isArray(markup.inline_keyboard)) return undefined;
+  return markup;
+};
 
 export const getLiveTimeline = (room: Room): EventTimeline =>
   room.getUnfilteredTimelineSet().getLiveTimeline();
@@ -474,7 +489,10 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
   const canRedact = permissions.action('redact', mx.getSafeUserId());
   const canDeleteOwn = permissions.event(MessageEvent.RoomRedaction, mx.getSafeUserId());
   const canSendReaction = permissions.event(MessageEvent.Reaction, mx.getSafeUserId());
+  const canSendBotCallback = permissions.event(BOT_CALLBACK_EVENT, mx.getSafeUserId());
   const canPinEvent = permissions.stateEvent(StateEvent.RoomPinnedEvents, mx.getSafeUserId());
+  const pendingBotActionsLockRef = useRef<Set<string>>(new Set());
+  const [pendingBotActions, setPendingBotActions] = useState<Set<string>>(new Set());
   const [editId, setEditId] = useState<string>();
 
   const roomToParents = useAtomValue(roomToParentsAtom);
@@ -1016,6 +1034,59 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
     },
     [editor]
   );
+  const handleBotAction = useCallback(
+    async (targetEventId: string, callbackData: string) => {
+      if (!canSendBotCallback) return;
+      if (!targetEventId || !callbackData) return;
+      const pendingLocks = pendingBotActionsLockRef.current;
+      if (pendingLocks.has(targetEventId)) return;
+      pendingLocks.add(targetEventId);
+      setPendingBotActions(new Set(pendingLocks));
+      try {
+        await mx.sendEvent(room.roomId, BOT_CALLBACK_EVENT as any, {
+          callback_data: callbackData,
+          'm.relates_to': {
+            event_id: targetEventId,
+          },
+        });
+      } finally {
+        pendingLocks.delete(targetEventId);
+        setPendingBotActions(new Set(pendingLocks));
+      }
+    },
+    [canSendBotCallback, mx, room.roomId]
+  );
+  const renderBotActions = useCallback(
+    (targetEventId: string, content: Record<string, unknown>) => {
+      const replyMarkup = getBotReplyMarkup(content);
+      if (!replyMarkup?.inline_keyboard || replyMarkup.inline_keyboard.length === 0) return null;
+
+      const disabled = pendingBotActions.has(targetEventId) || !canSendBotCallback;
+      return (
+        <Box wrap="Wrap" gap="200" style={{ marginTop: config.space.S200 }}>
+          {replyMarkup.inline_keyboard.flat().map((button) => {
+            const label = typeof button?.text === 'string' ? button.text.trim() : '';
+            const callbackData =
+              typeof button?.callback_data === 'string' ? button.callback_data.trim() : '';
+            if (!label || !callbackData) return null;
+            return (
+              <Chip
+                key={`${targetEventId}-${callbackData}-${label}`}
+                type="button"
+                variant="SurfaceVariant"
+                radii="Pill"
+                disabled={disabled}
+                onClick={() => handleBotAction(targetEventId, callbackData)}
+              >
+                {label}
+              </Chip>
+            );
+          })}
+        </Box>
+      );
+    },
+    [pendingBotActions, canSendBotCallback, handleBotAction]
+  );
   const { t } = useTranslation();
 
   const renderMatrixEvent = useMatrixEventRenderer<
@@ -1085,6 +1156,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
                 />
               )
             }
+            actions={renderBotActions(mEventId, getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
             memberPowerTag={getMemberPowerTag(senderId)}
@@ -1167,6 +1239,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
                 />
               )
             }
+            actions={renderBotActions(mEventId, mEvent.getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
             memberPowerTag={getMemberPowerTag(mEvent.getSender() ?? '')}
@@ -1270,6 +1343,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
                 />
               )
             }
+            actions={renderBotActions(mEventId, mEvent.getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
             memberPowerTag={getMemberPowerTag(mEvent.getSender() ?? '')}
