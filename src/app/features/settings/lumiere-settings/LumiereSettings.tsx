@@ -5,6 +5,8 @@ import { SequenceCard } from '../../../components/sequence-card';
 import { SettingTile } from '../../../components/setting-tile';
 import { SequenceCardStyle } from '../styles.css';
 import { Modal500 } from '../../../components/Modal500';
+import { useSetting } from '../../../state/hooks/settings';
+import { MessageLayout, settingsAtom } from '../../../state/settings';
 import {
   useAlternativeSidebarSetting,
   useChangelogDismissedForVersionSetting,
@@ -13,6 +15,7 @@ import {
   useNeverShowChangelogSetting,
   useRoundAvatarsSetting,
   useShowLastMessageSetting,
+  useTelegramStyleChatSetting,
 } from './store';
 import { LUMIERE_VERSION } from '../../../branding/version';
 
@@ -31,6 +34,7 @@ export function LumiereSettings({ requestClose }: LumiereSettingsProps) {
   };
   const [alternativeSidebar, setAlternativeSidebar] = useAlternativeSidebarSetting();
   const [showLastMessage, setShowLastMessage] = useShowLastMessageSetting();
+  const [telegramStyleChat, setTelegramStyleChat] = useTelegramStyleChatSetting();
   const [compactChats, setCompactChats] = useCompactChatsSetting();
   const [disableMessageOptionsBar, setDisableMessageOptionsBar] =
     useDisableMessageOptionsBarSetting();
@@ -41,6 +45,8 @@ export function LumiereSettings({ requestClose }: LumiereSettingsProps) {
   const [loadingReleases, setLoadingReleases] = useState(false);
   const [releasesError, setReleasesError] = useState<string>();
   const [releases, setReleases] = useState<ChangelogRelease[]>([]);
+  const [, setMessageLayout] = useSetting(settingsAtom, 'messageLayout');
+  const [, setMessageSpacing] = useSetting(settingsAtom, 'messageSpacing');
 
   useEffect(() => {
     if (!openChangelog) return undefined;
@@ -110,7 +116,7 @@ export function LumiereSettings({ requestClose }: LumiereSettingsProps) {
                   gap="400"
                 >
                   <SettingTile
-                    title="Telegram Style"
+                    title="Telegram Style Sidebar"
                     description="Combines Home and Direct Messages, shows Spaces in the conversation list, and enables the floating create menu."
                     after={<Switch value={alternativeSidebar} onChange={setAlternativeSidebar} />}
                   />
@@ -134,6 +140,22 @@ export function LumiereSettings({ requestClose }: LumiereSettingsProps) {
                   direction="Column"
                   gap="400"
                 >
+                  <SettingTile
+                    title="Telegram Style Chat"
+                    description="Forces chat messages to Bubble layout with Normal spacing and locks these settings."
+                    after={
+                      <Switch
+                        value={telegramStyleChat}
+                        onChange={(value) => {
+                          setTelegramStyleChat(value);
+                          if (value) {
+                            setMessageLayout(MessageLayout.Bubble);
+                            setMessageSpacing('400');
+                          }
+                        }}
+                      />
+                    }
+                  />
                   <SettingTile
                     title="Disable Message Action Bar"
                     description="Hides the hover message action bar. Right-click context menu still works."

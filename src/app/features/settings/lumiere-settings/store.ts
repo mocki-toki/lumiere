@@ -5,6 +5,7 @@ const LUMIERE_SETTINGS_CHANGE_EVENT = 'lumiere-settings-change';
 
 type LumiereSettingsStore = {
   alternativeSidebar: boolean;
+  telegramStyleChat: boolean;
   showLastMessage: boolean;
   compactChats: boolean;
   disableMessageOptionsBar: boolean;
@@ -15,6 +16,7 @@ type LumiereSettingsStore = {
 
 const defaultLumiereSettings: LumiereSettingsStore = {
   alternativeSidebar: true,
+  telegramStyleChat: true,
   showLastMessage: true,
   compactChats: false,
   disableMessageOptionsBar: true,
@@ -100,6 +102,36 @@ export const useShowLastMessageSetting = (): [boolean, (value: boolean) => void]
   };
 
   return [showLastMessage, updateShowLastMessage];
+};
+
+export const useTelegramStyleChatSetting = (): [boolean, (value: boolean) => void] => {
+  const [telegramStyleChat, setTelegramStyleChat] = useState<boolean>(
+    () => getLumiereSettings().telegramStyleChat
+  );
+
+  useEffect(() => {
+    const syncSettings = () => {
+      setTelegramStyleChat(getLumiereSettings().telegramStyleChat);
+    };
+
+    window.addEventListener('storage', syncSettings);
+    window.addEventListener(LUMIERE_SETTINGS_CHANGE_EVENT, syncSettings);
+
+    return () => {
+      window.removeEventListener('storage', syncSettings);
+      window.removeEventListener(LUMIERE_SETTINGS_CHANGE_EVENT, syncSettings);
+    };
+  }, []);
+
+  const updateTelegramStyleChat = (value: boolean) => {
+    setTelegramStyleChat(value);
+    setLumiereSettings({
+      ...getLumiereSettings(),
+      telegramStyleChat: value,
+    });
+  };
+
+  return [telegramStyleChat, updateTelegramStyleChat];
 };
 
 export const useCompactChatsSetting = (): [boolean, (value: boolean) => void] => {

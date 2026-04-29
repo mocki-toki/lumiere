@@ -50,6 +50,7 @@ import { useMessageLayoutItems } from '../../../hooks/useMessageLayout';
 import { useMessageSpacingItems } from '../../../hooks/useMessageSpacing';
 import { useDateFormatItems } from '../../../hooks/useDateFormat';
 import { SequenceCardStyle } from '../styles.css';
+import { useTelegramStyleChatSetting } from '../lumiere-settings/store';
 
 type ThemeSelectorProps = {
   themeNames: Record<string, string>;
@@ -741,12 +742,15 @@ function Editor() {
   );
 }
 
-function SelectMessageLayout() {
+function SelectMessageLayout({ disabled }: { disabled?: boolean }) {
   const [menuCords, setMenuCords] = useState<RectCords>();
   const [messageLayout, setMessageLayout] = useSetting(settingsAtom, 'messageLayout');
   const messageLayoutItems = useMessageLayoutItems();
+  const forcedMessageLayout = MessageLayout.Bubble;
+  const currentLayout = disabled ? forcedMessageLayout : messageLayout;
 
   const handleMenu: MouseEventHandler<HTMLButtonElement> = (evt) => {
+    if (disabled) return;
     setMenuCords(evt.currentTarget.getBoundingClientRect());
   };
 
@@ -765,9 +769,10 @@ function SelectMessageLayout() {
         radii="300"
         after={<Icon size="300" src={Icons.ChevronBottom} />}
         onClick={handleMenu}
+        aria-disabled={disabled}
       >
         <Text size="T300">
-          {messageLayoutItems.find((i) => i.layout === messageLayout)?.name ?? messageLayout}
+          {messageLayoutItems.find((i) => i.layout === currentLayout)?.name ?? currentLayout}
         </Text>
       </Button>
       <PopOut
@@ -794,7 +799,7 @@ function SelectMessageLayout() {
                   <MenuItem
                     key={item.layout}
                     size="300"
-                    variant={messageLayout === item.layout ? 'Primary' : 'Surface'}
+                    variant={currentLayout === item.layout ? 'Primary' : 'Surface'}
                     radii="300"
                     onClick={() => handleSelect(item.layout)}
                   >
@@ -810,12 +815,15 @@ function SelectMessageLayout() {
   );
 }
 
-function SelectMessageSpacing() {
+function SelectMessageSpacing({ disabled }: { disabled?: boolean }) {
   const [menuCords, setMenuCords] = useState<RectCords>();
   const [messageSpacing, setMessageSpacing] = useSetting(settingsAtom, 'messageSpacing');
   const messageSpacingItems = useMessageSpacingItems();
+  const forcedMessageSpacing: MessageSpacing = '400';
+  const currentSpacing = disabled ? forcedMessageSpacing : messageSpacing;
 
   const handleMenu: MouseEventHandler<HTMLButtonElement> = (evt) => {
+    if (disabled) return;
     setMenuCords(evt.currentTarget.getBoundingClientRect());
   };
 
@@ -834,9 +842,10 @@ function SelectMessageSpacing() {
         radii="300"
         after={<Icon size="300" src={Icons.ChevronBottom} />}
         onClick={handleMenu}
+        aria-disabled={disabled}
       >
         <Text size="T300">
-          {messageSpacingItems.find((i) => i.spacing === messageSpacing)?.name ?? messageSpacing}
+          {messageSpacingItems.find((i) => i.spacing === currentSpacing)?.name ?? currentSpacing}
         </Text>
       </Button>
       <PopOut
@@ -863,7 +872,7 @@ function SelectMessageSpacing() {
                   <MenuItem
                     key={item.spacing}
                     size="300"
-                    variant={messageSpacing === item.spacing ? 'Primary' : 'Surface'}
+                    variant={currentSpacing === item.spacing ? 'Primary' : 'Surface'}
                     radii="300"
                     onClick={() => handleSelect(item.spacing)}
                   >
@@ -896,15 +905,32 @@ function Messages() {
   const [urlPreview, setUrlPreview] = useSetting(settingsAtom, 'urlPreview');
   const [encUrlPreview, setEncUrlPreview] = useSetting(settingsAtom, 'encUrlPreview');
   const [showHiddenEvents, setShowHiddenEvents] = useSetting(settingsAtom, 'showHiddenEvents');
+  const [telegramStyleChat] = useTelegramStyleChatSetting();
+  const [, setMessageLayout] = useSetting(settingsAtom, 'messageLayout');
+  const [, setMessageSpacing] = useSetting(settingsAtom, 'messageSpacing');
+
+  useEffect(() => {
+    if (!telegramStyleChat) return;
+    setMessageLayout(MessageLayout.Bubble);
+    setMessageSpacing('400');
+  }, [telegramStyleChat, setMessageLayout, setMessageSpacing]);
 
   return (
     <Box direction="Column" gap="100">
       <Text size="L400">Messages</Text>
       <SequenceCard className={SequenceCardStyle} variant="SurfaceVariant" direction="Column">
-        <SettingTile title="Message Layout" after={<SelectMessageLayout />} />
+        <SettingTile
+          title="Message Layout"
+          description={telegramStyleChat ? 'Locked by Telegram Style Chat (Bubble).' : undefined}
+          after={<SelectMessageLayout disabled={telegramStyleChat} />}
+        />
       </SequenceCard>
       <SequenceCard className={SequenceCardStyle} variant="SurfaceVariant" direction="Column">
-        <SettingTile title="Message Spacing" after={<SelectMessageSpacing />} />
+        <SettingTile
+          title="Message Spacing"
+          description={telegramStyleChat ? 'Locked by Telegram Style Chat (Normal).' : undefined}
+          after={<SelectMessageSpacing disabled={telegramStyleChat} />}
+        />
       </SequenceCard>
       <SequenceCard className={SequenceCardStyle} variant="SurfaceVariant" direction="Column">
         <SettingTile
