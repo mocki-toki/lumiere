@@ -300,6 +300,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
       uploadBoardHandlers.current?.handleSend();
 
       const commandName = getBeginCommand(editor);
+      const commandContent = commandName ? commands[commandName as Command] : undefined;
       let plainText = toPlainText(editor.children, isMarkdown).trim();
       let customHtml = trimCustomHtml(
         toMatrixCustomHTML(editor.children, {
@@ -310,7 +311,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
       );
       let msgType = MsgType.Text;
 
-      if (commandName) {
+      if (commandName && commandContent) {
         plainText = trimCommand(commandName, plainText);
         customHtml = trimCommand(commandName, customHtml);
       }
@@ -327,11 +328,8 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
       } else if (commandName === Command.UnFlip) {
         plainText = `${UNFLIP} ${plainText}`;
         customHtml = `${UNFLIP} ${customHtml}`;
-      } else if (commandName) {
-        const commandContent = commands[commandName as Command];
-        if (commandContent) {
-          commandContent.exe(plainText);
-        }
+      } else if (commandContent) {
+        commandContent.exe(plainText);
         resetEditor(editor);
         resetEditorHistory(editor);
         sendTypingStatus(false);

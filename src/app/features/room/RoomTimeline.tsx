@@ -104,6 +104,11 @@ import { createMentionElement, isEmptyEditor, moveCursor } from '../../component
 import { roomIdToReplyDraftAtomFamily } from '../../state/room/roomInputDrafts';
 import { usePowerLevelsContext } from '../../hooks/usePowerLevels';
 import { GetContentCallback, MessageEvent, StateEvent } from '../../../types/matrix/room';
+import {
+  BOT_CALLBACK_EVENT,
+  BOT_REPLY_MARKUP_FIELD,
+  BotReplyMarkup,
+} from '../../../types/matrix/common';
 import { useKeyDown } from '../../hooks/useKeyDown';
 import { useDocumentFocusChange } from '../../hooks/useDocumentFocusChange';
 import { RenderMessageContent } from '../../components/RenderMessageContent';
@@ -150,6 +155,31 @@ const TimelineDivider = as<'div', { variant?: ContainerColor | 'Inherit' }>(
     </Box>
   )
 );
+
+const getBotReplyMarkup = (
+  content: Record<string, unknown>
+): BotReplyMarkup | undefined => {
+  const raw = content[BOT_REPLY_MARKUP_FIELD];
+  if (!raw || typeof raw !== 'object') return undefined;
+  const markup = raw as BotReplyMarkup;
+  if (!Array.isArray(markup.inline_keyboard)) return undefined;
+  return markup;
+};
+
+const BOT_ACTION_LOCK_MS = 5000;
+
+const getBotMessageSignature = (content: Record<string, unknown>): string => {
+  const body = typeof content.body === 'string' ? content.body : '';
+  const formattedBody = typeof content.formatted_body === 'string' ? content.formatted_body : '';
+  return JSON.stringify({
+    body,
+    formattedBody,
+    replyMarkup: content[BOT_REPLY_MARKUP_FIELD] ?? null,
+  });
+};
+
+const getBotActionLockKey = (targetEventId: string, messageSignature: string): string =>
+  `${targetEventId}:${messageSignature}`;
 
 export const getLiveTimeline = (room: Room): EventTimeline =>
   room.getUnfilteredTimelineSet().getLiveTimeline();
@@ -474,7 +504,11 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
   const canRedact = permissions.action('redact', mx.getSafeUserId());
   const canDeleteOwn = permissions.event(MessageEvent.RoomRedaction, mx.getSafeUserId());
   const canSendReaction = permissions.event(MessageEvent.Reaction, mx.getSafeUserId());
+  const canSendBotCallback = permissions.event(BOT_CALLBACK_EVENT, mx.getSafeUserId());
   const canPinEvent = permissions.stateEvent(StateEvent.RoomPinnedEvents, mx.getSafeUserId());
+  const pendingBotActionsLockRef = useRef<Map<string, number>>(new Map());
+  const pendingBotActionTimersRef = useRef<Map<string, number>>(new Map());
+  const [pendingBotActions, setPendingBotActions] = useState<Set<string>>(new Set());
   const [editId, setEditId] = useState<string>();
 
   const roomToParents = useAtomValue(roomToParentsAtom);
@@ -1016,6 +1050,145 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
     },
     [editor]
   );
+  const releaseBotActionLock = useCallback((lockKey: string) => {
+    const pendingLocks = pendingBotActionsLockRef.current;
+    if (!pendingLocks.has(lockKey)) return;
+    pendingLocks.delete(lockKey);
+    const timerId = pendingBotActionTimersRef.current.get(lockKey);
+    if (typeof timerId === 'number') {
+      window.clearTimeout(timerId);
+      pendingBotActionTimersRef.current.delete(lockKey);
+    }
+    setPendingBotActions(new Set(pendingLocks.keys()));
+  }, []);
+
+  const scheduleBotActionLockRelease = useCallback(
+    (lockKey: string, unlockAt: number) => {
+      const pendingLocks = pendingBotActionsLockRef.current;
+      const existingTimer = pendingBotActionTimersRef.current.get(lockKey);
+      if (typeof existingTimer === 'number') {
+        window.clearTimeout(existingTimer);
+      }
+      const timeoutMs = Math.max(unlockAt - Date.now(), 0);
+      const timerId = window.setTimeout(() => {
+        const currentUnlockAt = pendingLocks.get(lockKey);
+        if (typeof currentUnlockAt === 'number' && currentUnlockAt <= Date.now()) {
+          releaseBotActionLock(lockKey);
+        }
+      }, timeoutMs);
+      pendingBotActionTimersRef.current.set(lockKey, timerId);
+    },
+    [releaseBotActionLock]
+  );
+
+  useEffect(
+    () => () => {
+      pendingBotActionTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      pendingBotActionTimersRef.current.clear();
+      pendingBotActionsLockRef.current.clear();
+    },
+    []
+  );
+
+  const handleBotAction = useCallback(
+    async (targetEventId: string, callbackData: string, lockKey: string) => {
+      if (!canSendBotCallback) return;
+      if (!targetEventId || !callbackData || !lockKey) return;
+      const pendingLocks = pendingBotActionsLockRef.current;
+      if (pendingLocks.has(lockKey)) return;
+      const unlockAt = Date.now() + BOT_ACTION_LOCK_MS;
+      pendingLocks.set(lockKey, unlockAt);
+      setPendingBotActions(new Set(pendingLocks.keys()));
+      scheduleBotActionLockRelease(lockKey, unlockAt);
+      try {
+        await mx.sendEvent(room.roomId, BOT_CALLBACK_EVENT as any, {
+          callback_data: callbackData,
+          'm.relates_to': {
+            event_id: targetEventId,
+          },
+        });
+      } catch {
+        // Keep button lock active for BOT_ACTION_LOCK_MS even on send failure.
+      }
+    },
+    [canSendBotCallback, mx, room.roomId, scheduleBotActionLockRelease]
+  );
+  const renderBotActions = useCallback(
+    (targetEventId: string, content: Record<string, unknown>) => {
+      const replyMarkup = getBotReplyMarkup(content);
+      if (!replyMarkup?.inline_keyboard || replyMarkup.inline_keyboard.length === 0) return null;
+      const normalizedRows = replyMarkup.inline_keyboard
+        .map((row) => {
+          if (!Array.isArray(row)) return [];
+          return row
+            .map((button) => {
+              const label = typeof button?.text === 'string' ? button.text.trim() : '';
+              const callbackData =
+                typeof button?.callback_data === 'string' ? button.callback_data.trim() : '';
+              if (!label || !callbackData) return null;
+              return { label, callbackData };
+            })
+            .filter((button): button is { label: string; callbackData: string } => !!button);
+        })
+        .filter((row) => row.length > 0);
+      if (normalizedRows.length === 0) return null;
+
+      const maxLabelLength = normalizedRows.reduce(
+        (max, row) => Math.max(max, ...row.map((button) => button.label.length)),
+        0
+      );
+      const buttonWidthCh = Math.max(maxLabelLength, 1);
+      const lockKey = getBotActionLockKey(targetEventId, getBotMessageSignature(content));
+      const disabled = pendingBotActions.has(lockKey) || !canSendBotCallback;
+      const rowOccurrences = new Map<string, number>();
+      return (
+        <Box
+          className={css.BotActionRows}
+          direction="Column"
+          alignItems="Start"
+          gap="200"
+          style={{ marginTop: config.space.S200 }}
+        >
+          {normalizedRows.map((row) => {
+            const rowSignature = row
+              .map((button) => `${button.label}:${button.callbackData}`)
+              .join('|');
+            const rowOccurrence = (rowOccurrences.get(rowSignature) ?? 0) + 1;
+            rowOccurrences.set(rowSignature, rowOccurrence);
+            return (
+              <Box
+                key={`${targetEventId}-row-${rowSignature}-${rowOccurrence}`}
+                className={css.BotActionRow}
+                style={{ gridTemplateColumns: `repeat(${row.length}, max-content)` }}
+              >
+                {row.map((button) => {
+                  const { label, callbackData } = button;
+                  return (
+                    <Chip
+                      key={`${targetEventId}-${rowSignature}-${callbackData}-${label}`}
+                      className={css.BotActionButton}
+                      type="button"
+                      variant="SurfaceVariant"
+                      radii="400"
+                      size="400"
+                      disabled={disabled}
+                      onClick={() => handleBotAction(targetEventId, callbackData, lockKey)}
+                      style={{ minWidth: `${buttonWidthCh}ch` }}
+                    >
+                      <Text as="span" size="B300" style={{ width: '100%', textAlign: 'center' }}>
+                        {label}
+                      </Text>
+                    </Chip>
+                  );
+                })}
+              </Box>
+            );
+          })}
+        </Box>
+      );
+    },
+    [pendingBotActions, canSendBotCallback, handleBotAction]
+  );
   const { t } = useTranslation();
 
   const renderMatrixEvent = useMatrixEventRenderer<
@@ -1085,6 +1258,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
                 />
               )
             }
+            actions={renderBotActions(mEventId, getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
             memberPowerTag={getMemberPowerTag(senderId)}
@@ -1167,6 +1341,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
                 />
               )
             }
+            actions={renderBotActions(mEventId, mEvent.getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
             memberPowerTag={getMemberPowerTag(mEvent.getSender() ?? '')}
@@ -1270,6 +1445,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
                 />
               )
             }
+            actions={renderBotActions(mEventId, mEvent.getContent<Record<string, unknown>>())}
             hideReadReceipts={hideActivity}
             showDeveloperTools={showDeveloperTools}
             memberPowerTag={getMemberPowerTag(mEvent.getSender() ?? '')}

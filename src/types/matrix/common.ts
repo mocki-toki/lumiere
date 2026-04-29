@@ -88,3 +88,15 @@ export type ILocationContent = {
   geo_uri?: string;
   info?: IThumbnailContent;
 };
+
+export type BotInlineButton = {
+  text?: string;
+  callback_data?: string;
+};
+
+export type BotReplyMarkup = {
+  inline_keyboard?: BotInlineButton[][];
+};
+
+export const BOT_REPLY_MARKUP_FIELD = 'io.lumiere.bot.reply_markup';
+export const BOT_CALLBACK_EVENT = 'io.lumiere.bot.callback';
