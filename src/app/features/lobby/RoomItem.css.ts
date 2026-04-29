@@ -1,5 +1,6 @@
 import { style } from '@vanilla-extract/css';
 import { config, toRem } from 'folds';
+import { canHoverMediaQuery } from '../../styles/media';
 
 export const RoomItemCard = style({
   padding: config.space.S400,
@@ -13,8 +14,12 @@ export const RoomItemCard = style({
 });
 export const RoomProfileTopic = style({
   cursor: 'pointer',
-  ':hover': {
-    textDecoration: 'underline',
+  '@media': {
+    [canHoverMediaQuery]: {
+      ':hover': {
+        textDecoration: 'underline',
+      },
+    },
   },
 });
 export const ErrorNameContainer = style({

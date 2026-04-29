@@ -1,6 +1,7 @@
 import { createVar, keyframes, style, styleVariants } from '@vanilla-extract/css';
 import { recipe, RecipeVariants } from '@vanilla-extract/recipes';
 import { DefaultReset, color, config, toRem } from 'folds';
+import { canHoverMediaQuery } from '../../../styles/media';
 
 export const StickySection = style({
   position: 'sticky',
@@ -122,10 +123,13 @@ export const AvatarBase = style({
   transition: 'transform 200ms cubic-bezier(0, 0.8, 0.67, 0.97)',
   display: 'flex',
   alignSelf: 'start',
-
-  selectors: {
-    '&:hover': {
-      transform: `translateY(${toRem(-2)})`,
+  '@media': {
+    [canHoverMediaQuery]: {
+      selectors: {
+        '&:hover': {
+          transform: `translateY(${toRem(-2)})`,
+        },
+      },
     },
   },
 });
@@ -169,8 +173,17 @@ export const Username = style({
     'button&': {
       cursor: 'pointer',
     },
-    'button&:hover, button&:focus-visible': {
+    'button&:focus-visible': {
       textDecoration: 'underline',
+    },
+  },
+  '@media': {
+    [canHoverMediaQuery]: {
+      selectors: {
+        'button&:hover': {
+          textDecoration: 'underline',
+        },
+      },
     },
   },
 });

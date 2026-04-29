@@ -1,4 +1,4 @@
-import React, { MouseEventHandler, forwardRef, useState } from 'react';
+import React, { MouseEventHandler, forwardRef, useEffect, useState } from 'react';
 import { Room } from 'matrix-js-sdk';
 import {
   Avatar,
@@ -62,6 +62,7 @@ import { useCallPreferencesAtom } from '../../state/hooks/callPreferences';
 import { useAutoDiscoveryInfo } from '../../hooks/useAutoDiscoveryInfo';
 import { livekitSupport } from '../../hooks/useLivekitSupport';
 import { ScreenSize, useScreenSizeContext } from '../../hooks/useScreenSize';
+import { useCanHover } from '../../hooks/useCanHover';
 import { MessageEvent, StateEvent } from '../../../types/matrix/room';
 
 type RoomNavItemMenuProps = {
@@ -416,11 +417,12 @@ export function RoomNavItem({
   linkPath,
 }: RoomNavItemProps) {
   const screenSize = useScreenSizeContext();
+  const canHover = useCanHover();
   const mobile = screenSize === ScreenSize.Mobile;
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const [hover, setHover] = useState(false);
-  const { hoverProps } = useHover({ onHoverChange: setHover });
+  const { hoverProps } = useHover({ onHoverChange: setHover, isDisabled: !canHover });
   const { focusWithinProps } = useFocusWithin({ onFocusWithinChange: setHover });
   const [menuAnchor, setMenuAnchor] = useState<RectCords>();
   const unread = useRoomUnread(room.roomId, roomToUnreadAtom);
@@ -503,6 +505,10 @@ export function RoomNavItem({
   };
 
   const optionsVisible = hover || !!menuAnchor;
+
+  useEffect(() => {
+    if (!canHover) setHover(false);
+  }, [canHover]);
   const menuIconSize =
     alternativeSidebarLayout && !(screenSize === ScreenSize.Desktop && compactChats) ? '200' : '50';
   const callSession = useCallSession(room);

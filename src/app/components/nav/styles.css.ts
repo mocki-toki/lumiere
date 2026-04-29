@@ -1,6 +1,7 @@
 import { ComplexStyleRule, createVar, style } from '@vanilla-extract/css';
 import { RecipeVariants, recipe } from '@vanilla-extract/recipes';
 import { ContainerColor, DefaultReset, Disabled, RadiiVariant, color, config, toRem } from 'folds';
+import { canHoverMediaQuery } from '../../styles/media';
 
 export const NavCategory = style([
   DefaultReset,
@@ -20,11 +21,15 @@ export const NavLink = style({
   alignItems: 'center',
   cursor: 'pointer',
   flexGrow: 1,
-  ':hover': {
-    textDecoration: 'unset',
-  },
   ':focus': {
     outline: 'none',
+  },
+  '@media': {
+    [canHoverMediaQuery]: {
+      ':hover': {
+        textDecoration: 'unset',
+      },
+    },
   },
 });
 
@@ -55,7 +60,7 @@ const NavItemBase = style({
   minHeight: toRem(36),
 
   selectors: {
-    '&:hover, &:focus-visible': {
+    '&:focus-visible': {
       backgroundColor: ContainerHover,
     },
     '&[data-hover=true]': {
@@ -77,6 +82,15 @@ const NavItemBase = style({
       ':focus-within': {
         outline: `${config.borderWidth.B600} solid ${ContainerLine}`,
         outlineOffset: `calc(-1 * ${config.borderWidth.B600})`,
+      },
+    },
+  },
+  '@media': {
+    [canHoverMediaQuery]: {
+      selectors: {
+        '&:hover': {
+          backgroundColor: ContainerHover,
+        },
       },
     },
   },
@@ -114,11 +128,17 @@ export const NavItemContent = style({
   fontWeight: config.fontWeight.W500,
 
   selectors: {
-    '&:hover': {
-      textDecoration: 'unset',
-    },
     [`.${NavItemBase}[data-highlight=true] &`]: {
       fontWeight: config.fontWeight.W600,
+    },
+  },
+  '@media': {
+    [canHoverMediaQuery]: {
+      selectors: {
+        '&:hover': {
+          textDecoration: 'unset',
+        },
+      },
     },
   },
 });

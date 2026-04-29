@@ -1,6 +1,7 @@
 import { style } from '@vanilla-extract/css';
 import { DefaultReset, config } from 'folds';
 import { ContainerColor } from '../../styles/ContainerColor.css';
+import { canHoverMediaQuery } from '../../styles/media';
 
 export const CardGrid = style({
   display: 'grid',
@@ -24,9 +25,12 @@ export const RoomCardTopic = style({
   WebkitBoxOrient: 'vertical',
   overflow: 'hidden',
   cursor: 'pointer',
-
-  ':hover': {
-    textDecoration: 'underline',
+  '@media': {
+    [canHoverMediaQuery]: {
+      ':hover': {
+        textDecoration: 'underline',
+      },
+    },
   },
 });
 

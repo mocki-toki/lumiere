@@ -1,5 +1,6 @@
 import { style } from '@vanilla-extract/css';
 import { color, config, DefaultReset, Disabled, FocusOutline } from 'folds';
+import { canHoverMediaQuery } from '../../styles/media';
 
 export const MemberTile = style([
   DefaultReset,
@@ -19,11 +20,20 @@ export const MemberTile = style([
       '&[aria-pressed=true]': {
         backgroundColor: color.Surface.ContainerActive,
       },
-      'button&:hover, &:focus-visible': {
+      '&:focus-visible': {
         backgroundColor: color.Surface.ContainerHover,
       },
       'button&:active': {
         backgroundColor: color.Surface.ContainerActive,
+      },
+    },
+    '@media': {
+      [canHoverMediaQuery]: {
+        selectors: {
+          'button&:hover': {
+            backgroundColor: color.Surface.ContainerHover,
+          },
+        },
       },
     },
   },

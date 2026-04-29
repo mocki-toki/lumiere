@@ -2,6 +2,7 @@ import { createVar, style } from '@vanilla-extract/css';
 import { recipe, RecipeVariants } from '@vanilla-extract/recipes';
 import { color, config, DefaultReset, Disabled, FocusOutline, toRem } from 'folds';
 import { ContainerColor } from '../../styles/ContainerColor.css';
+import { canHoverMediaQuery } from '../../styles/media';
 
 export const Sidebar = style([
   DefaultReset,
@@ -76,9 +77,6 @@ export const SidebarItem = recipe({
       transition: 'transform 200ms cubic-bezier(0, 0.8, 0.67, 0.97)',
 
       selectors: {
-        '&:hover': {
-          transform: `translateX(${toRem(PUSH_X)})`,
-        },
         '&::before': {
           content: '',
           display: 'none',
@@ -90,9 +88,18 @@ export const SidebarItem = recipe({
           background: 'CurrentColor',
           transition: 'height 200ms linear',
         },
-        '&:hover::before': {
-          display: 'block',
-          width: toRem(3),
+      },
+      '@media': {
+        [canHoverMediaQuery]: {
+          selectors: {
+            '&:hover': {
+              transform: `translateX(${toRem(PUSH_X)})`,
+            },
+            '&:hover::before': {
+              display: 'block',
+              width: toRem(3),
+            },
+          },
         },
       },
     },
@@ -107,8 +114,14 @@ export const SidebarItem = recipe({
             display: 'block',
             height: toRem(24),
           },
-          '&:hover::before': {
-            width: toRem(3 + PUSH_X),
+        },
+        '@media': {
+          [canHoverMediaQuery]: {
+            selectors: {
+              '&:hover::before': {
+                width: toRem(3 + PUSH_X),
+              },
+            },
           },
         },
       },

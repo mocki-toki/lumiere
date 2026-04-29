@@ -78,8 +78,26 @@ a {
   color: var(--tc-link);
   text-decoration: none;
 }
-a:hover {
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  a:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (any-pointer: coarse) {
+  a:hover,
+  a:focus-visible,
+  button:focus-visible {
+    text-decoration: none !important;
+  }
+
+  button:hover,
+  [role='button']:hover {
+    background-color: inherit !important;
+    transform: none !important;
+    filter: none !important;
+    text-decoration: none !important;
+  }
 }
 
 [data-mx-spoiler][aria-pressed='true'] a {

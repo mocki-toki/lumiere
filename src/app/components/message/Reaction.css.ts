@@ -1,5 +1,6 @@
 import { createVar, style } from '@vanilla-extract/css';
 import { DefaultReset, FocusOutline, color, config, toRem } from 'folds';
+import { canHoverMediaQuery } from '../../styles/media';
 
 const Container = createVar();
 const ContainerHover = createVar();
@@ -40,7 +41,7 @@ export const Reaction = style([
         borderColor: color.Secondary.Main,
         borderWidth: config.borderWidth.B400,
       },
-      '&:hover, &:focus-visible': {
+      '&:focus-visible': {
         backgroundColor: ContainerHover,
       },
       '&:active': {
@@ -48,6 +49,15 @@ export const Reaction = style([
       },
       '&[aria-disabled=true], &:disabled': {
         cursor: 'not-allowed',
+      },
+    },
+    '@media': {
+      [canHoverMediaQuery]: {
+        selectors: {
+          '&:hover': {
+            backgroundColor: ContainerHover,
+          },
+        },
       },
     },
   },

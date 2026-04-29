@@ -28,6 +28,7 @@ import React, {
   MouseEventHandler,
   ReactNode,
   useCallback,
+  useEffect,
   useState,
 } from 'react';
 import FocusTrap from 'focus-trap-react';
@@ -77,6 +78,7 @@ import { MemberPowerTag, StateEvent } from '../../../../types/matrix/room';
 import { PowerIcon } from '../../../components/power';
 import colorMXID from '../../../../util/colorMXID';
 import { getPowerTagIconSrc } from '../../../hooks/useMemberPowerTag';
+import { useCanHover } from '../../../hooks/useCanHover';
 
 export type ReactionHandler = (keyOrMxc: string, shortcode: string) => void;
 
@@ -721,9 +723,10 @@ export const Message = as<'div', MessageProps>(
     const mx = useMatrixClient();
     const useAuthentication = useMediaAuthentication();
     const senderId = mEvent.getSender() ?? '';
+    const canHover = useCanHover();
 
     const [hover, setHover] = useState(false);
-    const { hoverProps } = useHover({ onHoverChange: setHover });
+    const { hoverProps } = useHover({ onHoverChange: setHover, isDisabled: !canHover });
     const { focusWithinProps } = useFocusWithin({ onFocusWithinChange: setHover });
     const [menuAnchor, setMenuAnchor] = useState<RectCords>();
     const [emojiBoardAnchor, setEmojiBoardAnchor] = useState<RectCords>();
@@ -740,6 +743,10 @@ export const Message = as<'div', MessageProps>(
       : undefined;
 
     const usernameColor = legacyUsernameColor ? colorMXID(senderId) : tagColor;
+
+    useEffect(() => {
+      if (!canHover) setHover(false);
+    }, [canHover]);
 
     const headerJSX = !collapse && (
       <Box
@@ -1158,8 +1165,9 @@ export const Event = as<'div', EventProps>(
     ref
   ) => {
     const mx = useMatrixClient();
+    const canHover = useCanHover();
     const [hover, setHover] = useState(false);
-    const { hoverProps } = useHover({ onHoverChange: setHover });
+    const { hoverProps } = useHover({ onHoverChange: setHover, isDisabled: !canHover });
     const { focusWithinProps } = useFocusWithin({ onFocusWithinChange: setHover });
     const [menuAnchor, setMenuAnchor] = useState<RectCords>();
     const stateEvent = typeof mEvent.getStateKey() === 'string';
@@ -1185,6 +1193,11 @@ export const Event = as<'div', EventProps>(
     const closeMenu = () => {
       setMenuAnchor(undefined);
     };
+
+    useEffect(() => {
+      if (!canHover) setHover(false);
+    }, [canHover]);
+
     const showMessageOptionsBar = !disableMessageOptionsBar && (hover || !!menuAnchor);
     const eventMenuContent = (
       <FocusTrap

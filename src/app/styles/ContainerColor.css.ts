@@ -1,6 +1,7 @@
 import { ComplexStyleRule } from '@vanilla-extract/css';
 import { RecipeVariants, recipe } from '@vanilla-extract/recipes';
 import { ContainerColor as TContainerColor, DefaultReset, color, config } from 'folds';
+import { canHoverMediaQuery } from './media';
 
 const getVariant = (variant: TContainerColor): ComplexStyleRule => ({
   vars: {
@@ -13,7 +14,7 @@ const getVariant = (variant: TContainerColor): ComplexStyleRule => ({
     'button&[aria-pressed=true]': {
       backgroundColor: color[variant].ContainerActive,
     },
-    'button&:hover, &:focus-visible': {
+    '&:focus-visible': {
       backgroundColor: color[variant].ContainerHover,
     },
     'button&:active': {
@@ -21,6 +22,15 @@ const getVariant = (variant: TContainerColor): ComplexStyleRule => ({
     },
     'button&[disabled]': {
       opacity: config.opacity.Disabled,
+    },
+  },
+  '@media': {
+    [canHoverMediaQuery]: {
+      selectors: {
+        'button&:hover': {
+          backgroundColor: color[variant].ContainerHover,
+        },
+      },
     },
   },
 });
