@@ -570,6 +570,7 @@ export function RoomNavItem({
     };
   }
   const userFallbackIconSize = alternativeSidebarLayout && !compactChats ? '200' : '100';
+  const desktopNonCompact = screenSize === ScreenSize.Desktop && !compactChats;
   const alternativeHorizontalPadding =
     screenSize === ScreenSize.Desktop ? config.space.S300 : config.space.S100;
   let contentPaddingStyle:
@@ -588,6 +589,12 @@ export function RoomNavItem({
       paddingTop: config.space.S100,
       paddingBottom: config.space.S100,
     };
+  }
+  let resolvedPaddingLeft = config.space.S100;
+  if (desktopNonCompact) {
+    resolvedPaddingLeft = config.space.S200;
+  } else if (alternativeSidebarLayout) {
+    resolvedPaddingLeft = alternativeHorizontalPadding;
   }
   let avatarContent = (
     <RoomIcon
@@ -638,8 +645,11 @@ export function RoomNavItem({
       <NavLink to={linkPath} onClick={room.isCallRoom() ? handleStartCall : undefined}>
         <NavItemContent
           style={{
-            paddingLeft: alternativeSidebarLayout ? alternativeHorizontalPadding : config.space.S100,
             ...contentPaddingStyle,
+            paddingLeft: resolvedPaddingLeft,
+            paddingRight: desktopNonCompact ? config.space.S200 : undefined,
+            paddingTop: desktopNonCompact ? config.space.S200 : contentPaddingStyle?.paddingTop,
+            paddingBottom: desktopNonCompact ? config.space.S200 : contentPaddingStyle?.paddingBottom,
           }}
         >
           <Box as="span" grow="Yes" alignItems="Center" gap="300">
