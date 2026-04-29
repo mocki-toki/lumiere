@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Badge, color, Icon, Icons, Text } from 'folds';
+import { Badge, color, config, Icon, Icons, Text } from 'folds';
 import {
   SidebarAvatar,
   SidebarItem,
@@ -17,9 +17,13 @@ import {
 import { useCrossSigningActive } from '../../../hooks/useCrossSigning';
 import { Modal500 } from '../../../components/Modal500';
 import { Settings, SettingsPages } from '../../../features/settings';
+import { useCompactChatsSetting } from '../../../features/settings/lumiere-settings/store';
+import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
 
 function UnverifiedIndicator() {
   const mx = useMatrixClient();
+  const screenSize = useScreenSizeContext();
+  const [compactChats] = useCompactChatsSetting();
 
   const crypto = mx.getCrypto();
   const [devices] = useDeviceList();
@@ -45,10 +49,16 @@ function UnverifiedIndicator() {
 
   const hasUnverified =
     unverified || (unverifiedDeviceCount !== undefined && unverifiedDeviceCount > 0);
+  const desktopNonCompact = screenSize === ScreenSize.Desktop && !compactChats;
+
   return (
     <>
       {hasUnverified && (
-        <SidebarItem active={settings} className={css.UnverifiedTab}>
+        <SidebarItem
+          active={settings}
+          className={css.UnverifiedTab}
+          style={desktopNonCompact ? { padding: config.space.S200 } : undefined}
+        >
           <SidebarItemTooltip tooltip={unverified ? 'Unverified Device' : 'Unverified Devices'}>
             {(triggerRef) => (
               <SidebarAvatar
